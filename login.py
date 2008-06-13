@@ -46,10 +46,12 @@ class FirstLogin:
 		self.enc_pass = ''
 
 	def echo_off(self, session):
-		session.push("\033[8m\xff\373\001") # ECHO OFF
+		#session.push("\033[8m\xff\373\001") # ECHO OFF
+		session.push("\xff\373\001") # ECHO OFF
 
 	def echo_on(self, session):
-		session.push("\033[8m\xff\374\001") # ECHO ON
+		#session.push("\033[8m\xff\374\001") # ECHO ON
+		session.push("\xff\374\001") # ECHO ON
 	
 	def generate_salt(self):
 		salt = ""

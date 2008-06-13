@@ -252,6 +252,7 @@ if __name__ == '__main__':
 		import actions
 		Actions = actions.Actions(sessions)
 		Admincmd = AdminCmds(sessions, ipsessions)
+		print "Accepting connections..."
 		while 1:
 			asyncore.loop(timeout=5, count=1) # Timer() called every 5 seconds.
 			#Timer(time.time())

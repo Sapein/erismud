@@ -1,6 +1,6 @@
 import os
-#import pysqlite2 as sqlite
-# First try importing the sqlite2 version, then the version packed with python2.5
+# First try importing the sqlite2 version (Python 2.4)
+# Then the version packed with Python 2.5.
 try:
 	from pysqlite2 import dbapi2 as sqlite
 except ImportError:

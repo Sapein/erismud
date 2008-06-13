@@ -1,5 +1,13 @@
 ERISMUD CHANGELOG
 
+2008-06-13 - Lee Harr [missive@hotmail.com]
+	* Email address checker now uses the scrubbed cmd.
+	* SecondServSock sends input through TelnetTalk.
+	* Fixed do_dellink().
+	* Possibly fixed the echo issue.
+	* Fixed npc/object cloning.
+	* Fixed giving items to mobs and looking at their inventory.
+
 2008-03-02 - M. Lanctot
 	* Login message now stored in motd.txt
 

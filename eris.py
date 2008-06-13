@@ -156,6 +156,9 @@ class SecondServSock(async_chat):
 	def found_terminator(self):
 		line = (''.join(self.data))
 		line = line.strip('\r')
+		self.tiac = TelnetTalk()
+		self.ndata = self.tiac.listen(line)
+		line = self.ndata[0]
 		self.data = []
 
 		try: 

@@ -159,13 +159,13 @@ class AdminCmds:
 			cu.execute("select id,name from objects where name = ?", (line.lower(),))
 			self.cloner = cu.fetchone()
 			cu.execute("insert into obj_instances(id,o_id,owner,creation) values\
-						(NULL, ?, ?,?)", (self.cloner[0], session.p_id, time()))
+					(NULL, ?, ?,?)", (self.cloner[0], session.p_id, time.time()))
 			session.push("%s has been cloned.\r\n" % str(self.cloner[1]))
 		elif self.npc:
 			cu.execute("select id,name from npcs where name = ?", (line.lower(),))
 			self.cloner = cu.fetchone()
-			cu.execute("insert into npcs_instances(id,o_id,owner,creation) values\
-						(NULL, ?, ?,?)", (self.cloner[0], session.p_id, time()))
+			cu.execute("insert into npc_instances(id,n_id,location,creation) values\
+					(NULL, ?, ?,?)", (self.cloner[0], session.p_id, time.time()))
 			session.push("%s has been cloned.\r\n" % str(self.cloner[1]))
 		else: session.push("No such object or NPC.\r\n")
 

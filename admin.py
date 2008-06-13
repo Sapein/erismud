@@ -64,10 +64,10 @@ class AdminCmds:
 	def do_dellink(self, session, line):
 		if not line: session.push("Correct syntax: dellink <link ID>\r\n")
 		self.todest = line.split(' ', 3)
-		cu.execute("select * from links where room_id = ? and exit = ?", (self.todest[0], self.todest[1]))
+		cu.execute("select * from links where id = ?", (self.todest[0], ))
 		self.linker = cu.fetchall()
 		if self.linker != []:
-			cu.execute("delete from links where room_id = ? and exit = ?", (self.linker[0][0], self.linker[0][1]))
+			cu.execute("delete from links where id = ?", (self.linker[0][0],))
 			self.msg = "The link between Room #" + str(self.linker[0][0]) + " and Exit #" + str(self.linker[0][1]) + " going " + str(self.linker[0][2]) + " has been destroyed.\r\n"
 			session.push(self.msg)
 		else:

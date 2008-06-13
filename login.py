@@ -185,8 +185,8 @@ class FirstLogin:
 		elif self.step == 7: # CHANGE
 			#self.echo_on(session)
 			emailreg = re.compile('^[0-9a-z_.+\-]+@[0-9a-z_.\-]+\.[a-z]{2,4}', re.IGNORECASE)
-			if emailreg.match(cmd) != None:
-				self.email = cmd
+			if emailreg.match(self.cmd) != None:
+				self.email = self.cmd
 				self.step = 8
 				self.createUser(session, self.plname, self.fpass)
 			else:

@@ -1,0 +1,4 @@
+Welcome to StockMUD, running on ErisMUD 0.5.1
+Visit http://erismud.org for more information.
+I am typing this just to test how long lines are represented on small terminals that have more than 80 columns in their window.
+Please enter your name: 

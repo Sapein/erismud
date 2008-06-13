@@ -1,0 +1,150 @@
+ERISMUD CHANGELOG
+
+2008-03-02 - M. Lanctot
+	* Login message now stored in motd.txt
+
+2008-01-23 - M. Lanctot
+	* ASCII maps can now be imported and converted from inside the game.
+	* Deleting a room now deletes all it's associated links.
+
+2008-01-21 - M. Lanctot
+	* TelnetIAC.py: primitive telnet interpreter that supports most telnet commands.
+
+2008-01-15 - M. Lanctot
+	* Optimized a few things in eris.py
+
+2008-01-14 - Mark Sherry
+	* Rewrote the ControlPanel
+
+2008-01-11 - M Lanctot
+	* Clone works for objects and npcs now, removed do_clonenpc.
+	* timestamp added to instances at cloning time.
+	* at login, check for IP instead of location to determine if the 
+	  player is already logged in (as crashing prevented re-login).
+
+2008-01-09 - M. Lanctot
+	* Added random 64-bytes salts to passwords.
+	* Redesigned the database tables.
+	* Colors placed in common.py, makes output more readable.
+	* Lots of little changes and optimization here and there.
+	* Continued converting everything to format strings.
+	
+2007-12-30 - Mark Sherry
+	* Lots of cosmetic and technical fixes.
+	* Factored out turning on and off echoing.
+	* Changed encpass to return a hashed, salted password.
+	* Wrote new function to check password, given plaintext (given) and
+	  hashed/salted version (stored).
+	* Added crude handling for telnet control codes.
+	* Rewrote bad name check to make it faster and more Pythonic.
+	* Now wrapping some statements in str, to handle unicode problems.
+	* Using format strings instead of plain string concatenation.
+
+2006-04-07 - ErisMUD 0.5:
+    * Ported to Pysqlite 2.2.0.
+    * User-defined settings now stored in eris.conf.
+    * A player won't see himself when looking at the room anymore.
+
+2005-07-25 - ErisMUD 0.4.1:
+    * Fixed a bug in the 'quit' command.
+    * Added ultra-basic blocking of IAC and telnet codes.
+    * All admin commands now require '@' prefixed to them, a la LambdaMOO.
+    * Fixed a slicing bug in @dellink.
+    * Threads replaced with a timer. Much more efficient.
+    * "Say" without argument doesn't do anything now.
+    * All player commands now placed in actions.py files.
+
+2005-07-17 - ErisMUD 0.4:
+
+    * Now with threading. Make sure your Python version supports threads.
+    * Most player actions now give a message to other users in the room.
+    * Fixed yet another login bug that looped over email/stats creation.
+    * Basic skills framework added.
+      'loiter' command added, which depends on the 'Loitering' skill to work.
+      'skills' command added.
+    * Trapped emotes without arguments.
+    * Basic health/damage system added. Proof-of-concept 'maim' command added.
+
+2005-07-04 - ErisMUD 0.3.1:
+    * Fixed a stupid bug in user creation that prevented login.
+    * Default description set when creating items/NPCs/characters to avoid slicing errors.
+    * 'kickout' command added - kicks a player out of the game, without banning em.
+    * Fixed the global bug with 'setansi'. Colors now stored in the socket object to allow
+      everyone to have different choices. Ugly but it works.
+
+2005-06-29 - ErisMUD 0.3:
+    * listhelp command removed, help does the same thing.
+    * Rewrote do_look() and it now returns an error message when the argument is not there.
+    * Query aliases removed, were not used.
+    * The logout bug when having more than one character from the same IP was NOT fixed
+      after all. But it should be now.
+    * NPCs can now hold inventory - added a 'npc_own' column in the instances table.
+      You can give items to NPCs and see what they hold by looking at them.
+      do_listinst() updated to show these changes.
+    * Player/NPC inventory and rooms now show the quantity of items instead of duplicating
+      the item name X times.
+    * Removed colors.py, now integrated in eris.py
+    * ANSI colors are now optional and set during character creation. It can be changed later
+      by doing 'setansi [on|off]'
+    * Names not allowed can be put in the 'badnames' file, one per line. If a player named has
+      these words anywhere in their name, it will be refused.
+    * Aliases added to items. Admin command 'addalias' created.
+    * Email is now asked at player creation. Stored into new 'email' column.
+    * New 'email <name>' command added to show the user's address.
+    * do_listplayers() updated to show the emails.
+
+2005-06-25 - ErisMUD 0.2.2:
+    * Fixed query typo in do_ridplayer().
+    * Added error message when do_get() fails.
+    * Names can only use letters, no other characters allowed.
+    * Fixed a bug that crashed the server when a player logged out.
+    * Fixed a typo in do_itemdesc().
+
+2005-06-23 - ErisMUD 0.2.1:
+
+    * Capitalized the leave/logged out messages.
+    * Renamed do_dig() to do_edig().
+    * Fixed a typo in do_itemdesc(), thanks to Steven Vogel.
+    * tables.py now adds basic help for player commands (will do coders later).
+    * help command divides the help topics in two columns.
+    * Fixed a bug in do_give(), where no arguments would boot you out, found by S. Vogel.
+    * Multiplaying is now blocked by default, except for localhost. Fixed a bug that
+      would half-logout the second character. Thanks again to S. V. for finding it.
+    * All description commands (for players, items, npcs and rooms) can now include
+      linebreaks by including '\n' in the description string.
+
+2005-06-19 - ErisMUD 0.2 released:
+
+    * handle_error() now defers to handle_close() instead of duplicating the code.
+    * Preventing session hijacking by logging in twice under the same name is now
+      properly implemented.
+    * Now with case-insensitive goodness everywhere.
+    * Added error check in do_ridplayer()
+    * Fixed do_locate() to really show the IP addresses (now stored in SQL table).
+    * Fixed do_goto(), now prevents going to nonexistent rooms.
+    * Added basic randomly-generated player stats (STR,DEX,WIS) and the 'stats' command
+      to check them.
+    * Added Lambda-style 'dig' command to speed the room creation process. 
+      (TUTORIAL updated)
+    * The Log() method now uses only one line for incoming connections.
+    * Various tiny bugfixes.
+
+2005-06-15 - ErisMUD 0.1b released:
+
+    * Changed the output of moving to show where the player is going.
+    * Added the IP address to the 'locate' output.
+    * The welcome message is now in a variable, in login.py
+    * Minor tweaks to the emote command.
+    * Added the 'give' commands. Players can now transfer items between them.
+    * Fixed a bug that prevented new character creation. Thanks to happypenguin.org folks.
+    * All admin commands that list stuff are now left-justified so it's readable now.
+    * Added 'listplayers' command.
+    * Added 'ridplayer' command. Deletes the player entry from the DB, use with caution.
+
+2005-06-13 - ErisMUD 0.1a released:
+
+    * Fixed a bug that crashed the server when getting the "Transport endpoint
+      is not connected" socket error.
+    * Added a basic emote command.
+
+2005-06-12 - Initial ErisMUD 0.1 release

@@ -1,0 +1,106 @@
+Simple tutorial for starting builders.
+
+== [ CREATING ROOMS ] ==
+
+> edig north The Fun Room	
+(edig <exit> <short description/title>)
+
+OR, you can also do it the hard way: 
+
+> addroom
+Will output a new room IDs. Remember it.
+> addlink <origin> <destination> <direction> 
+Do it for the other way around if you want a two-way exit.
+
+Example:
+> addroom
+Your new room has id #23
+> addlink 1 23 north
+> addlink 23 1 south
+
+You can now move between room #1 and room #23 by going north/south.
+
+= ROOM MANAGEMENT EXAMPLES =
+
+> listrooms
+Room #1 - short desc: First Room
+Room #2 - short desc: Second Room
+
+> delroom 2
+Room #2 has been destroyed.
+
+> listexits
+ID FROM TO
+#1  #1  #2
+#2  #2  #1
+(Exit ID, FROM ROOM #, TO ROOM #)
+
+> listlinks
+Room #1 - north
+Room #2 - south
+
+> dellink 1 1
+(dellink RoomID ExitID)
+The link between Room #1 and Exit #1 by north has been destroyed.
+
+> setshort This is the first room.
+Short description changed.
+
+> setlong You are in a dark room, likely to be eaten by a grue.
+Long description changed.
+
+
+== [ PLAYER MANAGEMENT ] ==
+
+> locate
+NAME       LOC  IP
+Foo        1    192.168.0.2
+Bar        3    127.0.0.1
+
+LOC is the room # where the player is.
+
+== [ OBJECT MANAGEMENT ] ==
+
+> additem sword
+Item sword is created.
+
+> itemdesc sword This is a big sword.
+Description set on sword.
+
+> listitems
+ID  NAME    DESC
+1   sword   This is a big sword
+
+> clone sword
+sword has been cloned.
+(It's now in your inventory)
+
+> delitem 1
+sword and all its instances have been destroyed.
+
+> listinst
+ID SubID Parent Is_Owned Is_In
+1  1     1      5        0
+(Instance ID, Sub ID, Object ID, Player ID, Room ID)
+
+> dest 1
+Instance #1 has been destroyed.
+
+
+=== [ NPC MANAGEMENT ] ===
+
+> addnpc guard
+NPC guard created.
+
+> npcdesc guard A mean guard.
+Description set on guard.
+
+> listnpcs
+ID #1 - Name: guard - Desc: A mean guard.
+
+> clonenpc guard
+guard cloned.
+(Is now in your current room.)
+
+> delnpc 1
+NPC #1 has been destroyed.

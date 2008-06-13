@@ -1,0 +1,68 @@
+ErisMUD 0.5.1
+
+ErisMUD is a MUD engine written from scratch in Python using SQLite for storing 
+data. ErisMUD is distributed under the GPL. It is a work-in-progress but already
+has many features:
+
+- Creating/destroying/listing rooms, items, NPCs with a single command.
+- Adding aliases to objects.
+- Optional ANSI colors.
+- Basic health/damage system.
+- Talking using the "say" command, chatting using the "chat" command.
+- Cloning items, dropping them on the floor, getting them, giving them to other players.
+- Instances: a single object may be cloned multiple times and every instance is
+  independent.
+- Easily add or modify help files with a single command.
+- Logging.
+
+Read the TUTORIAL file for a quick overview of the possibilities.
+
+== INSTALL ==
+No install is required for ErisMUD, other than Python 2.5. If you have an older Python release, 
+you will have to download the pysqlite [http://www.pysqlite.org] module for that version.
+
+To start the server, simply edit the parameters in eris.conf
+and the login welcome message in motd.txt and start the server by running:
+# python eris.py
+
+Don't forget to add your player name to the 'coders' file (one per line) in
+order to use the coder-only commands.
+
+== REQUIREMENTS ==
+- Python 2.5 
+  *or*
+- Python 2.3+   (http://python.org)
+- SQLite 3.2    (http://www.sqlite.org)
+- pysqlite 1.0+ (http://www.pysqlite.org)
+
+I did not test ErisMUD with previous versions.
+
+== KNOWN ISSUES ==
+
+* Since handle_error() is subclassed, no python error is ever raised. This makes
+  debugging difficult. Comment out SecondServSock.handle_error() in eris.py to see errors.
+
+== AUTHORS ==
+
+ErisMUD is written by Manuel Lanctot <sensoz@gmail.com>
+Versions 0.5.1 and 0.5.2 received a lot of help and fixes from Mark Sherry.
+Shoutouts to Ouroboros, misuba, Steven Vogel, Andrew Murphy/Elias, Katherine, Tiefling,
+Taral, Jesse and Sean Middleditch for the great suggestions, debugging and help 
+during development. Thanks to Maud for supporting me every day. If I forgot you, let me know.
+
+== OBLIGATORY LICENSE STUFF ==
+
+ErisMUD, a MUD engine/server written in Python.
+Copyright (C) 2005 Manuel Lanctot
+
+This program is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this
+program; if not, write to the Free Software Foundation, Inc., 59 Temple Place, 
+Suite 330, Boston, MA 02111-1307 USA

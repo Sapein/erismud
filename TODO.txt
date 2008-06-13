@@ -1,0 +1,20 @@
+* Make it possible to refer to instances with a number. So if I have two swords
+  in my inventory, use 'look sword 1' and 'look sword 2' to differentiate them.
+* Add a command to ban a player.
+* Add aliases to NPCs.
+* Add a revision-control system to allow different versions of objects to coexist.
+* Add a simple combat system.
+
+* Add a TIMEOUT setting in the config. Auto-logout if players.last_action is before that
+* Move the timer outside or eris.py
+* Need to verify compatibility with most telnet/MUD clients out there.
+* Allow plug-ins (custom commands) in a certain folder and scan for files/Classes there for unknown commands.
+* When you delete a room, delete all links to/from it too
+* dict self.twoways is both declared in do_edig and do_import in admin.py
+* add a command to show all rooms without any links
+* fix the SETANSI issue at character creation (not going ON when set to ON)
+* add a command to allow coders to see all IDs where they stand
+* Document the new mapper
+* Rewrite the tutorial
+* Add a CONFIG table that holds the various game settings (PvP on/off, skills, combat system, etc.)
+

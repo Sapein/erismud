@@ -1,0 +1,24 @@
+     [12]-[13]-[14]-[15]                 
+      |    |    |    |             
+[10]-[11]-[16]-[17]-[18]----[24] 
+      |    |    |    |       |  
+     [19]-[20]-[21]-[22]     |    
+                        \   [25]   
+                         \       
+                          [23]
+						  
+						  
+####
+<rooms>
+<room id="10">
+<short>Entrance to the forest</short>
+<long>There is a path leading deep into the dark forest.\r\nIt is very dark.</long>
+</room>
+
+<room id="11">
+<short>A small clearing</short>
+<long>A small fire is burning in the center of this clearing.\r\nThe trees are looming scarily.</long>
+</room>
+
+</rooms>
+

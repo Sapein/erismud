@@ -76,19 +76,19 @@ class Actions:
 					self.transf = cu.fetchone()
 					
 					# Check if given to a mob.
-					cu.execute("select id from npc_instances ni where location = ?\
+					cu.execute("select id from npc_instances ni where location = ? and \
 							ni.n_id = (select id from npcs where name = ?)", (session.is_in, self.parts[2]))
 					self.mob = cu.fetchone()
 
-					if self.transf != []:
+					if self.transf:
 						cu.execute("update obj_instances set owner = ? where id = ?", (self.transf[0], self.itom[0]))
 						session.push("You give %s to %s.\r\n" % (self.parts[0],self.parts[2]))
 						self.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0],self.parts[2]))
 
-					elif self.mob != []:
+					elif self.mob:
 						cu.execute("update obj_instances set npc_owner = ?,owner=NULL where id = ?", (self.mob[0], self.itom[0]))
 						session.push("You give %s to %s.\r\n" % (self.parts[0], self.parts[2]))
-						self.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0], self.parts[2]))
+						Effects.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0], self.parts[2]))
 					else: session.push("This person is not here.\r\n")
 
 				except: session.push("Correct syntax is: give <item> to <player>\r\n")

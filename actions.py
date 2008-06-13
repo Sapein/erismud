@@ -233,7 +233,7 @@ class Actions:
 			self.obj = cu.fetchone()
 			
 			#Get list of mobs in the room.
-			cu.execute("select npcs.name, npcs.description from npc_instances ni,npcs where \
+			cu.execute("select ni.id, npcs.name, npcs.description from npc_instances ni,npcs where \
 			npcs.id = ni.n_id and npcs.name = ? and ni.location = ?", (line.lower(), session.is_in))
 			self.mobonfloor = cu.fetchone()
 		
@@ -246,24 +246,27 @@ class Actions:
 					session.push("%s \r\n" % self.obj[1].replace('\\n', '\r\n'))
 
 				elif self.mobonfloor: #A mob/NPC
-					cu.execute("select instances.parent_id,instances.sub_id,instances.is_owned,instances.is_in,\
-								objects.obj_id,objects.name,instances.npc_own\
-								from instances,objects where instances.sub_id = 1 and instances.is_owned = 0 and instances.parent_id = objects.obj_id\
-								and instances.is_in = 0 and instances.npc_own = ?", [self.mobonfloor[0][7]])
+					print 'Looking at ', self.mobonfloor[0]
+					cu.execute("select obj_instances.o_id,\
+								objects.id,objects.name,obj_instances.npc_owner\
+								from obj_instances,objects where obj_instances.o_id = objects.id\
+								and obj_instances.npc_owner = ?", (self.mobonfloor[0],))
+
 					self.mobinv = cu.fetchall()
 
-					self.descri = self.mobonfloor[0][6].split('\\n') # Print the description
+					self.descri = self.mobonfloor[2].split('\\n') # Print the description
 					for i in self.descri:
 						session.push(str(i) + "\r\n")
 
-					if self.mobinv != []: # Print the mob's inventory
+					if self.mobinv: # Print the mob's inventory
 						self.stuff = []
 						self.stufa = {}
 						session.push(session.BOLD+session.WHITE+"Inventory:\r\n"+session.RESET)
 
 						for i in self.mobinv:
-							self.stuff.append(i[5])
-							self.stufa[i[5]] = self.stuff.count(i[5])
+							self.item_name = i[2]
+							self.stuff.append(item_name)
+							self.stufa[self.item_name] = self.stuff.count(self.item_name)
 						for i in self.stufa:
 							if self.stufa[i] > 1:
 								session.push(str(i) + " ("+str(self.stufa[i])+")" + "\r\n")

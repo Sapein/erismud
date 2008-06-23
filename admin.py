@@ -22,6 +22,27 @@ class AdminCmds:
 		except:
 			session.push("Something didn't work.\r\n")
 
+	def do_ban(self, session, line):
+		try:
+			cu.execute("update players set banned = 1 where name = ?", (line.lower(),))
+			session.push("%s has been banned and will not be able to log back in. Use <unban> to undo.\r\n")
+		except:
+			session.push("Impossible to ban that player.\r\n")
+
+	def do_unban(self, session, line):
+		try:
+			cu.execute("update players set banned = 0 where name = ?", (line.lower(),))
+			session.push("%s has been unbanned and can now login normally.\r\n")
+		except:
+			session.push("Impossible to unban that player.\r\n")
+
+	def do_listbans(self, session):
+        cu.execute("select id, name from players where banned = 1")
+		self.whole = cu.fetchall()
+		session.push("%6s %20s\r\n" % ("ID", "NAME"))
+		for i in self.whole:
+			session.push("%6s %20s\r\n" % (str(i[0]), str(i[1])))
+
 	def do_delroom(self, session, line):
 		try:
 			cu.execute("select id from rooms where id = ?", (line,))
@@ -257,7 +278,7 @@ class AdminCmds:
 		self.getrid = cu.fetchone()
 		try:
 			cu.execute("delete from players where name = ?", (self.getrid[1],))
-			session.push("Player %s has been wiped out of the system.\r\n" % line.capitalize())
+			session.push("Player %s has been completely wiped out of the system.\r\n" % line.capitalize())
 		except:
 			session.push("Player %s not found in the database.\r\n" % line.capitalize())
 

@@ -19,11 +19,12 @@ else:
 				email		TEXT NOT NULL ,			\
 				passwd 		TEXT NOT NULL ,			\
 				salt		TEXT NOT NULL ,			\
-				location	INTEGER NOT NULL ,			\
+				location	INTEGER NOT NULL ,		\
 				description TEXT ,					\
 				colors		TEXT ,					\
 				last_action TEXT ,					\
-				ip_addr		TEXT)")
+				ip_addr		TEXT ,					\
+				banned		INTEGER)")
 				
 	cu.execute("CREATE TABLE rooms( 			\
 				id		INTEGER PRIMARY KEY ,	\

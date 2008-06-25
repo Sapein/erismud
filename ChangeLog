@@ -1,6 +1,7 @@
 ERISMUD CHANGELOG
 
 2008-06-25 - M. Lanctot
+	* Started to move all SQL into model.py
 	* Added a ban check at login.
 
 2008-06-23 - M. Lanctot

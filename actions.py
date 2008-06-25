@@ -34,11 +34,9 @@ class Actions:
 
     def do_drop(self, session, line):
         try:
-            cu.execute("select objects.name,oi.id from obj_instances oi, objects where oi.owner = ? and \
-            objects.name = ? and objects.id = oi.o_id", (session.p_id, line.lower()))
-            self.drop = cu.fetchone()
+            self.drop = Select.getItemInstance(session, line.lower())
 
-            Update.dropItem(session, self.drop[1])
+            self.drop = Update.dropItem(session, self.drop[1])
             #self.msg = session.pname + " dropped " + line + "."
             #self.RoomBroadcast(session, session.is_in, self.msg)
             session.push("%s dropped %s.\r\n" % (self.drop[0], line))
@@ -56,7 +54,6 @@ class Actions:
 
         try:
             Update.setItemOwner(session, session.pid, self.objonfloor[0])
-            #cu.execute("update obj_instances set owner=?,location=NULL where id = ?", (session.p_id, self.objonfloor[0]))
             session.push("You pick up %s.\r\n" % line)
         except:
             session.push("This is not here.\r\n")
@@ -70,29 +67,21 @@ class Actions:
 
             if self.parts[1] == "to":
                 try:
-                    cu.execute("select oi.id from obj_instances oi where \
-                        oi.owner = ? and \
-                        oi.o_id = (select id from objects where name = ?)", (session.p_id, self.parts[0].lower()))
-                    self.itom = cu.fetchone() # Given item info
+                    self.itom = Select.getItemInstance(session, self.parts[0].lower()) # Given item info
 
                     # Check if given to a player.
-                    cu.execute("select id from players where name = ? and location = ?", (self.parts[2].lower(), session.is_in))
-                    self.transf = cu.fetchone()
+                    self.transf = Select.getPlayerInRoom(session, self.parts[2].lower())
 
                     # Check if given to a mob.
-                    cu.execute("select id from npc_instances ni where location = ? and \
-                               ni.n_id = (select id from npcs where name = ?)", (session.is_in, self.parts[2]))
-                    self.mob = cu.fetchone()
+                    self.mob = Select.getNpcInRoom(session, self.parts[2].lower())
 
                     if self.transf:
                         Update.setItemOwner(session, self.transf[0], self.itom[0])
-                        #cu.execute("update obj_instances set owner = ? where id = ?", (self.transf[0], self.itom[0]))
                         session.push("You give %s to %s.\r\n" % (self.parts[0],self.parts[2]))
                         self.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0],self.parts[2]))
 
                     elif self.mob:
                         Update.setItemNpcOwner(session, self.mob[0], self.itom[0])
-                        #cu.execute("update obj_instances set npc_owner = ?,owner=NULL where id = ?", (self.mob[0], self.itom[0]))
                         session.push("You give %s to %s.\r\n" % (self.parts[0], self.parts[2]))
                         Effects.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0], self.parts[2]))
                     else: session.push("This person is not here.\r\n")
@@ -159,10 +148,7 @@ class Actions:
     def do_inv(self, session, line):
         c = C(session)
 
-        cu.execute("select objects.name from objects, obj_instances oi where \
-                   oi.owner = ? and objects.id = oi.o_id", (session.p_id,))
-
-        self.owned = cu.fetchall()
+        self.owned = Select.getInventory(session)
         self.owned = c.flatten(self.owned)
         session.push(c.B_WHITE("Inventory\r\n"))
 
@@ -180,14 +166,12 @@ class Actions:
     def do_look(self, session, line):
         c = C(session)
         if not line: # Looking at the room itself
-            cu.execute("select s_desc,l_desc from rooms where id = ?", (session.is_in,))
-            self.descr = cu.fetchone()
+            self.descr = Select.getRoomDesc(session)
             session.push("%s \r\n" % (c.CYAN(self.descr[0]),))				# short desc
             session.push("%s \r\n" % self.descr[1].replace('\\n', '\r\n'))	# long desc
 
             # Players in the room.
-            cu.execute("select name from players where location = ?", (session.is_in,))
-            self.look_com = cu.fetchall()
+            self.look_com = Select.getPlayersInRoom(session)
             session.push("%s %s" % (session.BOLD, session.RED))
             for i in self.look_com:
                 if str(i[0].capitalize()) == session.pname: pass
@@ -195,13 +179,10 @@ class Actions:
             session.push("%s" % session.RESET)
 
             #Get list of NPCs in the room.
-            cu.execute("select name from npcs where id in (select n_id from npc_instances where location = ?)", [session.is_in])
-            self.mobonfloor = cu.fetchall()
+            self.mobonfloor = Select.getNpcsInRoom(session)
 
             #Get list of objects in the room.
-            cu.execute("select name,oi.o_id,count(*) from objects,obj_instances oi where objects.id = oi.o_id \
-                       and oi.location = ?", (session.is_in,))
-            self.objonfloor = cu.fetchall()
+            self.objonfloor = Select.getItemsInRoom(session)
 
             if self.mobonfloor != []:
                 for i in self.mobonfloor:
@@ -209,7 +190,7 @@ class Actions:
 
             if self.objonfloor != []:
                 for i in self.objonfloor:
-                    if i[0] == None or i[1] == None: pass
+                    if !i[0] or !i[1]: pass
                     elif i[2] > 1:
                         session.push("%s%s%s%s (%s) " % (session.BOLD,session.GREEN,str(i[0]),session.RESET,str(i[2])))
                     else:
@@ -218,45 +199,38 @@ class Actions:
 
             # List exits
             session.push("%s%sExits: " % (session.BOLD,session.CYAN))
-            cu.execute("select exit from links where origin = ?", (session.is_in,))
-            self.tmpgoto = cu.fetchall()
+            self.tmpgoto = Select.getExitsInRoom(session)
             for i in self.tmpgoto:
                 session.push("%s " % i[0])
             session.push("%s\r\n" % session.RESET)
 
         else: # Looking at something specific
             #Check if looked-at player is there
-            cu.execute("select id,description,location,name from players where name\
-                       = ? and location = ?", (line.lower(), session.is_in))
-            self.peeps = cu.fetchone()
+            self.peeps = Select.getPlayerDesc(session, line.lower())
 
             #Get list of items possessed by player or in the room
-            cu.execute("select o.name, o.description from objects o, obj_instances oi where \
-                       o.id = oi.o_id and o.name = ? and oi.owner = ? or oi.location = ?", (session.p_id,line.lower(), session.is_in))
-            self.obj = cu.fetchone()
+            self.obj = Select.getItemsOnPlayer(session, line.lower())
+            
+            #Get list of items in the room
+            self.obj2 = Select.getItemsInRoom(session, line.lower())
 
             #Get list of mobs in the room.
-            cu.execute("select ni.id, npcs.name, npcs.description from npc_instances ni,npcs where \
-                       npcs.id = ni.n_id and npcs.name = ? and ni.location = ?", (line.lower(), session.is_in))
-            self.mobonfloor = cu.fetchone()
+            self.mobonfloor = getNpcsInRoom(session, line.lower())
 
             try:
                 if self.peeps: #Looking at a player
                     session.push("%s \r\n" % self.peeps[1].replace('\\n', '\r\n'))
                     Effects.RoomBroadcast(session, session.is_in, " looks at " + line)
 
-                elif self.obj: #An object in your inventory or on the floor
+                elif self.obj: #An object in your inventory
+                    session.push("%s \r\n" % self.obj[1].replace('\\n', '\r\n'))
+                    
+                elif self.obj2: #An object on the floor
                     session.push("%s \r\n" % self.obj[1].replace('\\n', '\r\n'))
 
                 elif self.mobonfloor: #A mob/NPC
-                    print 'Looking at ', self.mobonfloor[0]
-                    cu.execute("select obj_instances.o_id,\
-                               objects.id,objects.name,obj_instances.npc_owner\
-                               from obj_instances,objects where obj_instances.o_id = objects.id\
-                               and obj_instances.npc_owner = ?", (self.mobonfloor[0],))
-
-                    self.mobinv = cu.fetchall()
-
+                    self.mobinv = Select.getItemsOnNpc(session, self.mobonfloor[0])
+                    
                     self.descri = self.mobonfloor[2].split('\\n') # Print the description
                     for i in self.descri:
                         session.push(str(i) + "\r\n")
@@ -264,7 +238,7 @@ class Actions:
                     if self.mobinv: # Print the mob's inventory
                         self.stuff = []
                         self.stufa = {}
-                        session.push(session.BOLD+session.WHITE+"Inventory:\r\n"+session.RESET)
+                        session.push(c.B_WHITE"Inventory:\r\n")
 
                         for i in self.mobinv:
                             self.item_name = i[2]
@@ -272,9 +246,9 @@ class Actions:
                             self.stufa[self.item_name] = self.stuff.count(self.item_name)
                         for i in self.stufa:
                             if self.stufa[i] > 1:
-                                session.push(str(i) + " ("+str(self.stufa[i])+")" + "\r\n")
+                                session.push("%s (%s)\r\n" % (str(i), str(self.stufa[i])))
                             else:
-                                session.push(str(i) + "\r\n")
+                                session.push("%s \r\n" % str(i))
                     else: pass
 
                 else: session.push("You do not see that here.\r\n")
@@ -293,12 +267,10 @@ class Actions:
             session.CYAN, session.WHITE = '\033[36m', '\033[37m'
             session.RESET, session.BOLD = '\033[0;0m', '\033[1m'
             Update.setColors(session, arg)
-            #cu.execute("update players set colors = ? where id = ?", (arg, session.p_id))
         elif arg == "off": # Empty strings.
             session.BLACK, session.RED, session.GREEN, session.YELLOW, session.BLUE = '','','','',''
             session.MAGENTA, session.CYAN, session.WHITE, session.RESET, session.BOLD = '','','','',''
             Update.setColors(session, arg)
-            #cu.execute("update players set colors = ? where id = ?", (arg, session.p_id))
         else: session.push("Syntax:\r\nsetansi [off|on]\r\n")
 
     # def do_skills(self, session, line):
@@ -326,8 +298,7 @@ class Actions:
     def do_who(self, session, line):
         c = C(session)
         session.push("The following players are logged on:\r\n")
-        cu.execute("select name from players where location > 0")
-        self.whoin = cu.fetchall()
+        self.whoin = Select.getAllPlayerNames()
         for i in self.whoin:
             session.push("%s\r\n" % (c.B_RED(i[0].capitalize()),))
         session.push("\r\n")
@@ -351,57 +322,8 @@ class Actions:
     do_down = do_d
     do_i = do_inv
     do_l = do_look
-
-
-
-### Proof Of Concept
-
-
-    def do_loiter(self, session, line):
-        # Example of an action depending on a skill.
-        # Skills vary between 1-20. Throw 1D20:
-        cu.execute("select loiter from skills where p_id = ?", [session.p_id])
-        self.curskill = cu.fetchone()[0]
-        self.die = randrange(1, 20)
-        # If the result is lower than the skill, it's successful.
-        if self.die < self.curskill:
-            self.do_emote(session, "loiters")
-        else:
-            session.push("You fail to loiter.\r\n")
-
-    def do_maim(self, session, line):
-        # Proof of concept for a basic damage system.
-        # Lose 3 HPs then call heal(), which will heal 1 HP every 10 second until back to normal.
-        session.push("You damage yourself and lose 3 HPs.\r\n")
-        cu.execute("select curhp,maxhp from pnames where p_id = ?", [session.p_id])
-        self.health = cu.fetchone()
-        self.current = self.health[0] - 3
-        session.push("Current HP: " + str(self.current) + "\r\n")
-        session.push("Max HP: " + str(self.health[1]) + "\r\n")
-        cu.execute("update pnames set curhp = ? where p_id = ?", (self.current, session.p_id))
-
-        self.heal(session, '')
-
-    def do_juggle(self, session, line):
-        print type(self), dir(self)
-        self.skich = self.skillcheck(session, "juggling", 60)
-        if self.skich[0] == "success":
-            Effects.RoomBroadcast(session, session.is_in, " juggles")
-            session.push("You juggle.\r\n")
-        elif self.skich[0] == "fail":
-            Effects.RoomBroadcast(session, session.is_in, " fails to juggle")
-            session.push("You fail to juggle.\r\n")
-
-    def do_duchie(self, session, line):
-        if line == '': session.push("A skill is needed in argument.\r\n")
-        try:
-            cu.execute("select ? from learningpts where p_id = ?", (line, session.p_id))
-            self.duchie = cu.fetchone()[0]
-            session.push("Learning points in " + line + ": " + str(self.duchie) + "\r\n")
-        except:
-            session.push("You do not have that skill.\r\n")
-
-
+    
+    
 class EffectsC:
 
     def __init__(self, sessions):
@@ -411,8 +333,7 @@ class EffectsC:
         "By calling this method, 'line' is sent to all players in 'inroom'."
         c = C(session)
 
-        cu.execute("select id from players where location = ?", (inroom,))
-        self.local = cu.fetchall()
+        self.local = Select.getAllPlayersInLoc(inroom)
         self.pnamer = c.B_WHITE(session.pname)
         if not line:
             pass
@@ -427,77 +348,3 @@ class EffectsC:
                     self.tmpses.push("%s %s\r\n" % (self.pnamer,line))
 
 
-    def skillcheck(self, session, pskill, diff):
-        self.skassoc = {'disguise': 'app', 'juggling':'dex', 'evasion':'per', 'dodge':'agl'}
-
-        #toDo = 'SELECT ? FROM skills WHERE p_id = ?'
-        #print "pskill", pskill
-        #cu.execute('SELECT juggling FROM skills WHERE p_id = ?', session.p_id)
-        cu.execute("select ? from skills where p_id = ?", (pskill, session.p_id))
-        self.skill = cu.fetchone()[0]
-        print 'skill', self.skill
-        self.assoc = self.skassoc[pskill]
-        cu.execute("select * from pnames where p_id = ?", [session.p_id])
-        cu.execute("select ? from pnames where p_id = ?", [self.assoc, session.p_id])
-        self.stat = cu.fetchone()[0]
-        print 'stat', self.stat
-
-        cu.execute("select * from skills")
-        print cu.fetchall()
-
-        self.roll = randrange(1, 6) + randrange(1, 6) + randrange(1, 6) + randrange(1, 6) + randrange(1, 6) + randrange(1, 6)
-        self.subtotal = self.skill + self.stat + self.roll
-        self.bonus = self.roll
-        self.malus = 0
-        self.skillp = 0
-        if self.roll >= 26:
-            self.roll2 = randrange(1, 30)
-            self.bonus += self.roll2
-            self.skillp += randrange(1, 3) + 1
-
-            if self.roll2 >= 28:
-                self.roll3 = randrange(1, 20)
-                self.bonus += self.roll3
-                self.skillp += randrange(1, 3) + + randrange(1, 3) + 2
-
-                if self.roll3 == 20:
-                    self.bonus += randrange(1, 10)
-                    self.skillp += randrange(1, 3) + randrange(1, 3) + randrange(1, 3) + 3
-
-        elif self.roll <= 9:
-            self.roll2 = randrange(1, 30)
-            self.malus += self.roll2
-            self.skillp += randrange(1, 3) + 1
-
-            if self.roll2 <= 3:
-                self.roll3 = randrange(1, 20)
-                self.malus += self.roll3
-                self.skillp += randrange(1, 3) + + randrange(1, 3) + 2
-
-                if self.roll3 == 1:
-                    self.malus += randrange(1, 10)
-                    self.skillp += randrange(1, 3) + randrange(1, 3) + randrange(1, 3) + 3
-
-        self.total = self.subtotal + self.bonus - self.malus
-
-        if self.total >= diff:
-            self.skillp += randrange(1, 4) + randrange(1, 4) + 2
-            # DEBUG
-            #session.push("Die throw: " + str(self.total) + "\r\n")
-            #session.push("Skill: " + str(self.skill) + "\r\n")
-            #session.push("Learning points: " + str(self.skillp) + "\r\n")
-            #cu.execute("update learningpts set ? = ? where p_id = %?" % pskill, self.skillp, session.p_id)
-            cu.execute("select ? from learningpts where p_id = ?", (pskill, session.p_id))
-            self.current = cu.fetchone()[0] + self.skillp
-            cu.execute("update learningpts set ? = ? where p_id = ?", (pskill, self.current, session.p_id))
-            return ("success", self.skillp)
-        else:
-            self.skillp += 1
-            # DEBUG
-            #session.push("Die throw: " + str(self.total) + "\r\n")
-            #session.push("Skill: " + str(self.skill) + "\r\n")
-            #session.push("Learning points: " + str(self.skillp) + "\r\n")
-            cu.execute("select ? from learningpts where p_id = ?", (pskill, session.p_id))
-            self.current = cu.fetchone()[0] + self.skillp
-            cu.execute("update learningpts set ? = ? where p_id = ?", (pskill, self.current, session.p_id))
-            return ("fail", self.skillp)

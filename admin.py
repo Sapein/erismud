@@ -1,5 +1,6 @@
 import tables
 from common import C
+from model import Select, Update, Insert, Delete
 cu = tables.cu
 
 class AdminCmds:
@@ -15,47 +16,42 @@ class AdminCmds:
 
     def do_addroom(self, session, line):
         try:
-            cu.execute( "insert into rooms(\
-                        id, s_desc, l_desc)\
-                        values (NULL,'A room','Set the description.')")
-            session.push("Your new room has id #%d.\r\n" % cu.lastrowid)
+            self.rid = Insert.addRoom()
+            session.push("Your new room has id #%d.\r\n" % self.rid)
         except:
             session.push("Something didn't work.\r\n")
 
     def do_ban(self, session, line):
         try:
-            cu.execute("update players set banned = 1 where name = ?", (line.lower(),))
-            session.push("%s has been banned and will not be able to log back in. Use <unban> to undo.\r\n")
+            Update.banPlayer(line.lower())
+            session.push("%s has been banned and will not be able to log back in. Use <unban> to undo.\r\n" % line)
         except:
             session.push("Impossible to ban that player.\r\n")
 
     def do_unban(self, session, line):
         try:
-            cu.execute("update players set banned = 0 where name = ?", (line.lower(),))
-            session.push("%s has been unbanned and can now login normally.\r\n")
+            Update.unbanPlayer(line.lower())
+            session.push("%s has been unbanned.\r\n" % line)
         except:
             session.push("Impossible to unban that player.\r\n")
 
     def do_listbans(self, session):
-        cu.execute("select id, name from players where banned = 1")
-        self.whole = cu.fetchall()
+        self.whole = Select.getBannedPlayers()
         session.push("%6s %20s\r\n" % ("ID", "NAME"))
         for i in self.whole:
             session.push("%6s %20s\r\n" % (str(i[0]), str(i[1])))
 
     def do_delroom(self, session, line):
         try:
-            cu.execute("select id from rooms where id = ?", (line,))
-            fop = cu.fetchone()[0]
-            cu.execute("delete from rooms where id = ?", (fop,))
-            cu.execute("delete from links where origin = ? or dest = ?", (fop,))
-            session.push("Room #%s and it's links have been deleted.\r\n" % (fop,))
+            self.fop = Select.getRoom(line)
+            Delete.deleteRoom(self.fop[0])
+            Delete.deleteLink(self.fop[0])
+            session.push("Room #%s and all of its links have been deleted.\r\n" % (fop,))
         except:
             session.push("Unable to find this room.\r\nCorrect syntax: delroom <room ID>\r\n")
 
     def do_listrooms(self, session, line):
-        cu.execute("select id, s_desc from rooms")
-        self.whole = cu.fetchall()
+        self.whole = Select.getAllRooms()
         session.push("%6s %15s\r\n" % ("ID", "SHORT DESC"))
         for i in self.whole:
             session.push("%6s %15s\r\n" % (str(i[0]), str(i[1])))
@@ -69,40 +65,38 @@ class AdminCmds:
             self.roomnum = int(self.parts[0])
             self.exitnum = int(self.parts[1])
             self.direction = str(self.parts[2])
-            cu.execute( "insert into links(id, origin, dest, exit) values\
-                        (NULL, ?, ?, ?)", (self.roomnum, self.exitnum, self.direction))
+            
+            Insert.addLink(self.roomnum, self.exitnum, self.direction)
             session.push("New link added.\r\n")
         except:
             session.push("Correct syntax: addlink <origin> <destination> <direction>\r\n")
 
-    def do_listlinks(self, session, line):
-        cu.execute("select * from links")
-        self.linksall = cu.fetchall()
-        session.push("%6s %6s %6s %4s\r\n" % ("ID", "ORIGIN", "DEST", "EXIT"))
-        for i in self.linksall:
-            session.push("%6s %6s %6s %4s\r\n" % (str(i[0]), str(i[1]), str(i[2]), str(i[3])))
+#   def do_listlinks(self, session, line):
+#       cu.execute("select * from links")
+#       self.linksall = cu.fetchall()
+#       session.push("%6s %6s %6s %4s\r\n" % ("ID", "ORIGIN", "DEST", "EXIT"))
+#       for i in self.linksall:
+#           session.push("%6s %6s %6s %4s\r\n" % (str(i[0]), str(i[1]), str(i[2]), str(i[3])))
 
     def do_dellink(self, session, line):
         if not line: session.push("Correct syntax: dellink <link ID>\r\n")
-        self.todest = line.split(' ', 3)
-        cu.execute("select * from links where id = ?", (self.todest[0], ))
-        self.linker = cu.fetchall()
+        self.linker = Select.getLink(line)
+        
         if self.linker != []:
-            cu.execute("delete from links where id = ?", (self.linker[0][0],))
-            self.msg = "The link between Room #" + str(self.linker[0][0]) + " and Exit #" + str(self.linker[0][1]) + " going " + str(self.linker[0][2]) + " has been destroyed.\r\n"
-            session.push(self.msg)
+            Delete.deleteLinkById(self.linker[0])
+            session.push("Link #%s has been deleted.\r\n" % self.linker[0])
         else:
             session.push("This link does not exist.\r\n")
 
     def do_setshort(self, session, line):
         try:
-            cu.execute("update rooms set s_desc = ? where id = ?", (line, session.is_in))
+            Update.setShortDesc(session.is_in, line)
             session.push("Short description changed.\r\n")
         except: session.push("Unable to set the short description of this room.\r\n")
 
     def do_setlong(self, session, line):
         try:
-            cu.execute("update rooms set l_desc = ? where id = ?", (line, session.is_in))
+            Update.setLongDesc(session.is_in, line)
             session.push("Long description changed.\r\n")
         except: session.push("Unable to set the long description of this room.\r\n")
 
@@ -119,143 +113,108 @@ class AdminCmds:
             session.push("Help database updated.\r\n")
 
     def do_locate(self, session, line):
-        cu.execute("select id,name,location,ip_addr from players where location > 0")
-        self.all = cu.fetchall()
+        self.all = Select.getLocation()
 
         session.push("%4s %10s %5s %4s\r\n" % ("ID", "NAME", "LOC", "IP"))
         for i in self.all:
-            session.push("%4s %10s %5s %4s\r\n" % (str(i[0]), str(i[1]).capitalize(), str(i[2]), str(i[3])))
+            session.push("%4s %10s %5s %4s\r\n" % (str(i[0]), i[1].capitalize(), str(i[2]), i[3]))
 
     def do_goto(self, session, line):
         try:
-            cu.execute("select id from rooms where id = ?", (line,))
-            self.exists = cu.fetchone()
-            cu.execute("update players set location = ? where id = ?", (self.exists[0], session.p_id))
-            session.is_in = self.exists[0]
-        except: session.push("You cannot go there.\r\n")
+            self.room = Select.getRoom(line)
+            Update.setLocation(self.room[0], session.p_id)
+            session.is_in = self.room[0]
+        except: session.push("This room does not exist.\r\n")
 
     def do_additem(self, session, line):
         if not line: session.push("The object needs a name.\r\n")
         else:
-            cu.execute("insert into objects(id,name,description) values\
-                       (NULL, ?, 'Set description')", (line.lower(),))
-            session.push("Item %s has been created with ID #%s.\r\n" % (line.lower(), cu.lastrowid))
+            self.iid = Insert.addItem(line.lower())
+            session.push("Item %s has been created with ID #%s.\r\n" % (line.lower(), self.iid))
 
     def do_listitems(self, session, line):
-        cu.execute("select id,name,description from objects")
-        self.lookobj = cu.fetchall()
+        self.lookobj = Select.getAllItems()
 
         session.push("%5s %10s %4s\r\n" % ("ID", "NAME", "DESC"))
         for i in self.lookobj:
             session.push("%5s %10s %4s\r\n" % (i[0], i[1], i[2][:20]))
 
     def do_delitem(self, session, line):
-        cu.execute("select id,name from objects where id = ? or where name = ?", (line,line))
-        self.barn = cu.fetchone()
-        if self.barn != None: #If the object exists
-            cu.execute("delete from objects where id = ?", (self.barn[0],))
-            cu.execute("delete from obj_instances where o_id = ?", (self.barn[0],))
-            session.push("%s and all its instances have been destroyed.\r\n" % self.barn[0])
-        else:
+        self.barn = Select.getItemNameId(line)
+        try:
+            Delete.deleteItem(self.barn[0])
+            session.push("%s and all its instances have been destroyed.\r\n" % self.barn[1])
+        except:
             session.push("This object does not exist.\r\n")
 
     def do_itemdesc(self, session, line):
         try:
             self.splitarg = line.split(' ', 1)
-            cu.execute("select name from objects where name = ?", (self.splitarg[0].lower(),))
-            self.barn = cu.fetchone()
-            if self.barn != None: #If the object exists
-                cu.execute("update objects set description = ? where name = ?", (self.splitarg[1], self.splitarg[0].lower()))
+            self.rcount = Update.setItemDescription(self.splitarg[0].lower(), self.splitarg[1])
+            if self.rcount == 1:
                 session.push("Description set on %s.\r\n" % str(self.splitarg[0]).lower())
-            else: session.push("This object does not exist.\r\n")
-        except: session.push("> ")
+            else: 
+                session.push("Item not found.\r\n")
+
+        except: session.push("This object does not exist.\r\n@itemdesc <item name> <description>")
 
     def do_clone(self, session, line):
-        cu.execute("select id,name from objects where name = ?", (line.lower(),))
-        self.obj = cu.fetchone()
-        cu.execute("select id,name from npcs where name = ?", (line.lower(),))
-        self.npc = cu.fetchone()
+        self.obj = Select.getItemNameId(line.lower())
+        self.npc = Select.getNpc(line.lower())
 
         if self.obj:
-            cu.execute("select id,name from objects where name = ?", (line.lower(),))
-            self.cloner = cu.fetchone()
-            cu.execute("insert into obj_instances(id,o_id,owner,creation) values\
-                       (NULL, ?, ?,?)", (self.cloner[0], session.p_id, time.time()))
+            Insert.cloneItem(self.cloner[0], session.p_id, time.time())
             session.push("%s has been cloned.\r\n" % str(self.cloner[1]))
         elif self.npc:
-            cu.execute("select id,name from npcs where name = ?", (line.lower(),))
-            self.cloner = cu.fetchone()
-            cu.execute("insert into npc_instances(id,n_id,location,creation) values\
-                       (NULL, ?, ?,?)", (self.cloner[0], session.p_id, time.time()))
+            Insert.cloneItem(self.cloner[0], session.p_id, time.time())
             session.push("%s has been cloned.\r\n" % str(self.cloner[1]))
         else: session.push("No such object or NPC.\r\n")
 
     def do_list_oinst(self, session, line):
-        cu.execute("select id,o_id,owner,location from obj_instances")
-        self.instobj = cu.fetchall()
+        self.instobj = Select.listObjectInstances()
 
         session.push("%6s %6s %7s %9s\r\n" % ("ID", "OBJ", "OWNER", "LOC"))
         for i in self.instobj:
             session.push("%6s %6s %7s %9s\r\n" % (str(i[0]), str(i[1]), str(i[2]), str(i[3])))
 
     def do_dest_obj(self, session, line):
-        cu.execute("select id from obj_instances where id = ?", [line])
-        self.barn = cu.fetchone()
-        if self.barn != None: #If the instance exists, try:
-            try:
-                cu.execute("delete from obj_instances where id = ?", (line,))
-                session.push("Object Instance #%s has been destroyed.\r\n" % line)
-            except: session.push("Object Instance #%s does not exist.\r\n" % line)
-        else: pass
+        self.rcount = Delete.deleteObject(line)
+        if self.rcount == 1: 
+            session.push("Object Instance #%s has been destroyed.\r\n" % line)
+        else:
+            session.push("Object Instance #%s does not exist.\r\n" % line)
 
     def do_dest_npc(self, session, line):
-        cu.execute("select id from npc_instances where id = ?", [line])
-        self.barn = cu.fetchone()
-        if self.barn != None: #If the instance exists, try:
-            try:
-                cu.execute("delete from npc_instances where id = ?", (line,))
-                session.push("NPC Instance #%s has been destroyed.\r\n" % line)
-            except: session.push("NPC Instance #%s does not exist.\r\n" % line)
-        else: pass
+        self.rcount = Delete.deleteNpcInst(line)
+        if self.rcount == 1: 
+            session.push("NPC Instance #%s has been destroyed.\r\n" % line)
+        else: 
+            session.push("NPC Instance #%s does not exist.\r\n" % line)
 
     def do_addnpc(self, session, line):
         if not line: session.push("The NPC needs a name.\r\n> ")
         else:
-            cu.execute("insert into npcs(id,name,description) values\
-                       (NULL, ?, 'Set description.')", (line.lower(),))
-            session.push("NPC %s has been created with ID #%s.\r\n" % (line.lower(),cu.lastrowid))
+            self.nid = Insert.addNpc(line.lower())
+            session.push("NPC %s has been created with ID #%s.\r\n" % (line.lower(),self.nid))
 
     def do_npcdesc(self, session, line):
         if not line: session.push("Correct syntax: npcdesc <name> <description>\r\n")
+        
         self.splitarg = line.split(' ', 1)
-        cu.execute("select name from npcs where name = ?", (self.splitarg[0].lower(),))
-        self.barn = cu.fetchone()
-        if self.barn != None: #If the object exists
-            try:
-                cu.execute("update npcs set description = ? where name = ? or id = ?", (self.splitarg[1], self.splitarg[0].lower()))
-                session.push("Description set on %s.\r\n" % str(self.splitarg[0]).lower())
-            except: session.push("This NPC does not exist.\r\n")
-        else: pass
+        self.barn = Select.getNpc(self.splitarg[0].lower())
+        
+        if self.barn:
+            setNpcDesc(self.barn[0], self.splitarg[1])
+            session.push("Description set on %s.\r\n" % str(self.splitarg[0]).lower())
+        else: session.push("This NPC does not exist.\r\n")
 
     def do_delnpc(self, session, line):
-        cu.execute("select id from npcs where id = ?", (line,))
-        self.barn = cu.fetchone()
-        self.splitarg = line.split(' ', 1)
-        if self.barn != None: #If the object exists
-            try:
-                cu.execute("delete from npcs where id = ?", (line,))
-                session.push("NPC #%s had been destroyed.\r\n" % line)
-            except: session.push("This NPC does not exist.\r\n")
-        else: pass
+        self.barn = Select.getNpc(line)
 
-    # def do_clonenpc(self, session, line):
-        # try:
-            # cu.execute("select id,name from npcs where name = ?", (line.lower(),))
-            # self.cloner = cu.fetchone()
-            # cu.execute("insert into npc_instances(id,n_id,location) values\
-                        # (NULL, ?, ?)", (self.cloner[0], session.is_in))
-            # session.push("%s cloned (Inst #%s).\r\n" % str(self.cloner[1]).capitalize(), cu.lastrowid)
-        # except: session.push("No such NPC.\r\n")
+        if self.barn: #If the object exists
+            Delete.deleteNpc(self.barn[0])
+            session.push("NPC #%s had been deleted.\r\n" % line)
+        else: session.push("This NPC does not exist.\r\n")
 
     def do_listnpcs(self, session, line):
         cu.execute("select id,name,description from npcs")

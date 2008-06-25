@@ -1,10 +1,14 @@
+* Separate all the output to a distinct class for easier templating.
+* Optimize the queries and tables.
+* The current files organization is a mess, clean up all the imports and shit.
+* Add an easy way of subclassing Handler()
+
 * Make it possible to refer to instances with a number. So if I have two swords
   in my inventory, use 'look sword 1' and 'look sword 2' to differentiate them.
 * Add a command to ban a player.
 * Add aliases to NPCs.
 * Add a revision-control system to allow different versions of objects to coexist.
 * Add a simple combat system.
-
 * Add a TIMEOUT setting in the config. Auto-logout if players.last_action is before that
 * Move the timer outside or eris.py
 * Need to verify compatibility with most telnet/MUD clients out there.

@@ -1,5 +1,6 @@
 * Separate all the output to a distinct class for easier templating.
 * Optimize the queries and tables.
+  Separate all queries in a "model" file.
 * The current files organization is a mess, clean up all the imports and shit.
 * Add an easy way of subclassing Handler()
 

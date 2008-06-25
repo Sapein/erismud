@@ -172,7 +172,7 @@ class FirstLogin:
                 return
 
             if self.check_password(self.cmd) == 0:
-                # Check if user is banned.
+                # Check if the user is banned.
                 if self.check_ban(self.plname) == 1:
                     session.push("You have been banned. Get out.\r\n")
                     session.close()

@@ -1,6 +1,9 @@
 import tables, ConfigParser
+from model import Select, Update
 from common import C
 cu = tables.cu
+
+Update = Update()
 
 config = ConfigParser.ConfigParser()
 config.read("eris.conf")
@@ -13,18 +16,20 @@ class Actions:
         Effects = EffectsC(self.sessions)
 
     def do_chat(self, session, line):
-        cu.execute("select id from players where location > 0")
-        self.everybody = cu.fetchall()
-        self.talker = session.BOLD+session.WHITE + session.pname + session.RESET
+        c = C(session)
+        self.everybody = Select.getAllPlayers()
+        self.talker = c.B_WHITE(session.pname)
         for i in self.everybody:
             self.listen = self.sessions.get(i[0])
             if self.listen == None:
                 pass
             else:
-                self.listen.push(session.BOLD+session.GREEN+"["+session.RESET+ self.talker +session.BOLD+session.GREEN+"] "+session.RESET + line + "\r\n")
+                self.lbracket = c.B_GREEN("[")
+                self.rbracket = c.B_GREEN("]")
+                self.listen.push("%s%s%s %s" % (self.lbracket, self.talker, self.rbracket, line))
 
     def do_description(self, session, line):
-        cu.execute("update players set description = ? where id = ?", (line, session.p_id))
+        Update.setDescription(session, line)
         session.push("Description set.\r\n")
 
     def do_drop(self, session, line):
@@ -33,10 +38,10 @@ class Actions:
             objects.name = ? and objects.id = oi.o_id", (session.p_id, line.lower()))
             self.drop = cu.fetchone()
 
-            cu.execute("update obj_instances set owner=NULL,location = ? where id = ?", (session.is_in, self.drop[1]))
+            Update.dropItem(session, self.drop[1])
             #self.msg = session.pname + " dropped " + line + "."
             #self.RoomBroadcast(session, session.is_in, self.msg)
-            session.push(str(self.drop[0])+" dropped.\r\n")
+            session.push("%s dropped %s.\r\n" % (self.drop[0], line))
         except: session.push("You cannot drop this.\r\n")
 
     def do_emote(self, session, line):
@@ -47,12 +52,11 @@ class Actions:
             session.push("Emote: %s %s \r\n" % (session.pname, self.emote))
 
     def do_get(self, session, line):
-        cu.execute("select id,o_id from obj_instances where location=? and owner is NULL and \
-        o_id = (select id from objects where name = ?)", (int(session.is_in), line.lower()))
-        self.objonfloor = cu.fetchone()
+        self.objonfloor = Select.getItem(session, line.lower())
 
         try:
-            cu.execute("update obj_instances set owner=?,location=NULL where id = ?", (session.p_id, self.objonfloor[0]))
+            Update.setItemOwner(session, session.pid, self.objonfloor[0])
+            #cu.execute("update obj_instances set owner=?,location=NULL where id = ?", (session.p_id, self.objonfloor[0]))
             session.push("You pick up %s.\r\n" % line)
         except:
             session.push("This is not here.\r\n")
@@ -81,12 +85,14 @@ class Actions:
                     self.mob = cu.fetchone()
 
                     if self.transf:
-                        cu.execute("update obj_instances set owner = ? where id = ?", (self.transf[0], self.itom[0]))
+                        Update.setItemOwner(session, self.transf[0], self.itom[0])
+                        #cu.execute("update obj_instances set owner = ? where id = ?", (self.transf[0], self.itom[0]))
                         session.push("You give %s to %s.\r\n" % (self.parts[0],self.parts[2]))
                         self.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0],self.parts[2]))
 
                     elif self.mob:
-                        cu.execute("update obj_instances set npc_owner = ?,owner=NULL where id = ?", (self.mob[0], self.itom[0]))
+                        Update.setItemNpcOwner(session, self.mob[0], self.itom[0])
+                        #cu.execute("update obj_instances set npc_owner = ?,owner=NULL where id = ?", (self.mob[0], self.itom[0]))
                         session.push("You give %s to %s.\r\n" % (self.parts[0], self.parts[2]))
                         Effects.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0], self.parts[2]))
                     else: session.push("This person is not here.\r\n")
@@ -99,15 +105,14 @@ class Actions:
         if not line: session.push("You don't go anywhere.\r\n")
         else:
             try:
-                cu.execute("select origin, dest, exit from links where origin = ? and exit = ?", (session.is_in, line))
-                self.isexit = cu.fetchone()
+                self.isexit = Select.getExit(session, line.lower())
             except:
                 session.push("No exit this way.\r\n")
 
             try:
                 # Actually move
+                Update.setLocation(session, self.isexit[1])
                 Effects.RoomBroadcast(session, session.is_in, " leaves %s." % str(self.isexit[2]))
-                cu.execute("update players set location = ? where id = ?", (self.isexit[1], session.p_id))
                 session.is_in = self.isexit[1]
                 Effects.RoomBroadcast(session, session.is_in, " enters the room.")
                 self.do_look(session, '') # Force a look, to be replaced by something nicer.
@@ -117,8 +122,7 @@ class Actions:
 
     def do_help(self, session, line):
         if not line: # help command alone
-            cu.execute("select command from helps")
-            self.allh = cu.fetchall()
+            self.allh = Select.getAllHelp()
             self.allhelp = []
             for i in self.allh:
                 self.allhelp.append(i[0])
@@ -143,12 +147,11 @@ class Actions:
 
         else: #If help <foo>
             try:
-                cu.execute("select command, doc from helps where command = ?", line)
-                self.helper = cu.fetchone()
-                session.push("Help for " + line + ":\r\n")
+                self.helper = Select.getHelp(command)
+                session.push("Help for %s: \r\n" % (line,))
                 self.docu = self.helper[1].split('\\n')
                 for i in self.docu:
-                    session.push(i + "\r\n")
+                    session.push("%s \r\n" % (i,))
                 session.push("\r\n")
             except:
                 session.push("Help is not available on this topic.\r\n")
@@ -289,11 +292,13 @@ class Actions:
             session.YELLOW, session.BLUE, session.MAGENTA = '\033[33m', '\033[34m', '\033[35m'
             session.CYAN, session.WHITE = '\033[36m', '\033[37m'
             session.RESET, session.BOLD = '\033[0;0m', '\033[1m'
-            cu.execute("update players set colors = ? where id = ?", (arg, session.p_id))
+            Update.setColors(session, arg)
+            #cu.execute("update players set colors = ? where id = ?", (arg, session.p_id))
         elif arg == "off": # Empty strings.
             session.BLACK, session.RED, session.GREEN, session.YELLOW, session.BLUE = '','','','',''
             session.MAGENTA, session.CYAN, session.WHITE, session.RESET, session.BOLD = '','','','',''
-            cu.execute("update players set colors = ? where id = ?", (arg, session.p_id))
+            Update.setColors(session, arg)
+            #cu.execute("update players set colors = ? where id = ?", (arg, session.p_id))
         else: session.push("Syntax:\r\nsetansi [off|on]\r\n")
 
     # def do_skills(self, session, line):

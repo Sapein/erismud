@@ -1,5 +1,8 @@
 ERISMUD CHANGELOG
 
+2008-06-25 - M. Lanctot
+	* Added a ban check at login.
+
 2008-06-23 - M. Lanctot
 	* Added 'banned' column to players table.
 	* Added new admin commands: BAN, UNBAN, LISTBANS

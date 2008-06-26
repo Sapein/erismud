@@ -1,9 +1,11 @@
 import tables, ConfigParser
 from model import Select, Update
 from common import C
-cu = tables.cu
+
+#cu = tables.cu
 
 Update = Update()
+Select = Select()
 
 config = ConfigParser.ConfigParser()
 config.read("eris.conf")
@@ -29,14 +31,14 @@ class Actions:
                 self.listen.push("%s%s%s %s" % (self.lbracket, self.talker, self.rbracket, line))
 
     def do_description(self, session, line):
-        Update.setDescription(session, line)
+        Update.setDescription(session.p_id, line)
         session.push("Description set.\r\n")
 
     def do_drop(self, session, line):
         try:
             self.drop = Select.getItemInstance(session, line.lower())
 
-            self.drop = Update.dropItem(session, self.drop[1])
+            self.drop = Update.dropItem(session.is_in, self.drop[1])
             #self.msg = session.pname + " dropped " + line + "."
             #self.RoomBroadcast(session, session.is_in, self.msg)
             session.push("%s dropped %s.\r\n" % (self.drop[0], line))
@@ -50,10 +52,10 @@ class Actions:
             session.push("Emote: %s %s \r\n" % (session.pname, self.emote))
 
     def do_get(self, session, line):
-        self.objonfloor = Select.getItem(session, line.lower())
+        self.objonfloor = Select.getItem(session.is_in, line.lower())
 
         try:
-            Update.setItemOwner(session, session.pid, self.objonfloor[0])
+            Update.setItemOwner(session.p_id, self.objonfloor[0])
             session.push("You pick up %s.\r\n" % line)
         except:
             session.push("This is not here.\r\n")
@@ -76,12 +78,12 @@ class Actions:
                     self.mob = Select.getNpcInRoom(session.is_in, self.parts[2].lower())
 
                     if self.transf:
-                        Update.setItemOwner(session, self.transf[0], self.itom[0])
+                        Update.setItemOwner(self.transf[0], self.itom[0])
                         session.push("You give %s to %s.\r\n" % (self.parts[0],self.parts[2]))
                         self.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0],self.parts[2]))
 
                     elif self.mob:
-                        Update.setItemNpcOwner(session, self.mob[0], self.itom[0])
+                        Update.setItemNpcOwner(self.mob[0], self.itom[0])
                         session.push("You give %s to %s.\r\n" % (self.parts[0], self.parts[2]))
                         Effects.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0], self.parts[2]))
                     else: session.push("This person is not here.\r\n")
@@ -94,19 +96,19 @@ class Actions:
         if not line: session.push("You don't go anywhere.\r\n")
         else:
             try:
-                self.isexit = Select.getExit(session, line.lower())
+                self.isexit = Select.getExit(session.is_in, line.lower())
             except:
                 session.push("No exit this way.\r\n")
 
             try:
                 # Actually move
-                Update.setLocation(session, self.isexit[1])
+                Update.setLocation(session.p_id , self.isexit[1])
                 Effects.RoomBroadcast(session, session.is_in, " leaves %s." % str(self.isexit[2]))
                 session.is_in = self.isexit[1]
                 Effects.RoomBroadcast(session, session.is_in, " enters the room.")
                 self.do_look(session, '') # Force a look, to be replaced by something nicer.
 
-            except: 
+            except:
                 session.push("You can't move that way.\r\n")
 
     def do_help(self, session, line):
@@ -148,7 +150,7 @@ class Actions:
     def do_inv(self, session, line):
         c = C(session)
 
-        self.owned = Select.getInventory(session)
+        self.owned = Select.getInventory(session.p_id)
         self.owned = c.flatten(self.owned)
         session.push(c.B_WHITE("Inventory\r\n"))
 
@@ -166,12 +168,12 @@ class Actions:
     def do_look(self, session, line):
         c = C(session)
         if not line: # Looking at the room itself
-            self.descr = Select.getRoomDesc(session)
+            self.descr = Select.getRoomDesc(session.is_in)
             session.push("%s \r\n" % (c.CYAN(self.descr[0]),))				# short desc
             session.push("%s \r\n" % self.descr[1].replace('\\n', '\r\n'))	# long desc
 
             # Players in the room.
-            self.look_com = Select.getPlayersInRoom(session)
+            self.look_com = Select.getPlayersInRoom(session.is_in)
             session.push("%s %s" % (session.BOLD, session.RED))
             for i in self.look_com:
                 if str(i[0].capitalize()) == session.pname: pass
@@ -179,10 +181,10 @@ class Actions:
             session.push("%s" % session.RESET)
 
             #Get list of NPCs in the room.
-            self.mobonfloor = Select.getNpcsInRoom(session)
+            self.mobonfloor = Select.getNpcsInRoom(session.is_in)
 
             #Get list of objects in the room.
-            self.objonfloor = Select.getItemsInRoom(session)
+            self.objonfloor = Select.getItemsInRoom(session.is_in, session.p_id)
 
             if self.mobonfloor != []:
                 for i in self.mobonfloor:
@@ -190,7 +192,7 @@ class Actions:
 
             if self.objonfloor != []:
                 for i in self.objonfloor:
-                    if !i[0] or !i[1]: pass
+                    if not i[0] or not i[1]: pass
                     elif i[2] > 1:
                         session.push("%s%s%s%s (%s) " % (session.BOLD,session.GREEN,str(i[0]),session.RESET,str(i[2])))
                     else:
@@ -199,23 +201,23 @@ class Actions:
 
             # List exits
             session.push("%s%sExits: " % (session.BOLD,session.CYAN))
-            self.tmpgoto = Select.getExitsInRoom(session)
+            self.tmpgoto = Select.getExitsInRoom(session.is_in)
             for i in self.tmpgoto:
                 session.push("%s " % i[0])
             session.push("%s\r\n" % session.RESET)
 
         else: # Looking at something specific
             #Check if looked-at player is there
-            self.peeps = Select.getPlayerDesc(session, line.lower())
+            self.peeps = Select.getPlayerDesc(session.is_in, line.lower())
 
             #Get list of items possessed by player or in the room
-            self.obj = Select.getItemsOnPlayer(session, line.lower())
+            self.obj = Select.getItemsOnPlayer(session.p_id, line.lower())
             
             #Get list of items in the room
-            self.obj2 = Select.getItemsInRoom(session, line.lower())
+            self.obj2 = Select.getItemsInRoom(session.is_in, session.p_id, line.lower())
 
             #Get list of mobs in the room.
-            self.mobonfloor = getNpcsInRoom(session, line.lower())
+            self.mobonfloor = getNpcsInRoom(session.is_in, line.lower())
 
             try:
                 if self.peeps: #Looking at a player
@@ -229,7 +231,7 @@ class Actions:
                     session.push("%s \r\n" % self.obj[1].replace('\\n', '\r\n'))
 
                 elif self.mobonfloor: #A mob/NPC
-                    self.mobinv = Select.getItemsOnNpc(session, self.mobonfloor[0])
+                    self.mobinv = Select.getItemsOnNpc(self.mobonfloor[0])
                     
                     self.descri = self.mobonfloor[2].split('\\n') # Print the description
                     for i in self.descri:
@@ -238,7 +240,7 @@ class Actions:
                     if self.mobinv: # Print the mob's inventory
                         self.stuff = []
                         self.stufa = {}
-                        session.push(c.B_WHITE"Inventory:\r\n")
+                        session.push(c.B_WHITE("Inventory:\r\n"))
 
                         for i in self.mobinv:
                             self.item_name = i[2]
@@ -266,11 +268,11 @@ class Actions:
             session.YELLOW, session.BLUE, session.MAGENTA = '\033[33m', '\033[34m', '\033[35m'
             session.CYAN, session.WHITE = '\033[36m', '\033[37m'
             session.RESET, session.BOLD = '\033[0;0m', '\033[1m'
-            Update.setColors(session, arg)
+            Update.setColors(session.p_id, arg)
         elif arg == "off": # Empty strings.
             session.BLACK, session.RED, session.GREEN, session.YELLOW, session.BLUE = '','','','',''
             session.MAGENTA, session.CYAN, session.WHITE, session.RESET, session.BOLD = '','','','',''
-            Update.setColors(session, arg)
+            Update.setColors(session.p_id, arg)
         else: session.push("Syntax:\r\nsetansi [off|on]\r\n")
 
     # def do_skills(self, session, line):

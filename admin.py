@@ -1,7 +1,13 @@
 import tables
 from common import C
 from model import Select, Update, Insert, Delete
-cu = tables.cu
+
+Update = Update()
+Select = Select()
+Insert = Insert()
+Delete = Delete()
+
+#cu = tables.cu
 
 class AdminCmds:
     """ Special commands for admins."""

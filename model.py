@@ -22,17 +22,17 @@ class Select:
         cu.execute("select id,name from players where name = ?", (player,))
         return cu.fetchone()
     
-    def getPlayerDesc(self, session, player):
+    def getPlayerDesc(self, loc, player):
         cu.execute("select id,description,location,name from players \
-            where name = ? and location = ?", (player, session.is_in))
+            where name = ? and location = ?", (player, loc))
         return cu.fetchone()
     
-    def getItemsOnPlayer(self, session, item):
+    def getItemsOnPlayer(self, pid, item):
         cu.execute("select o.name, o.description from objects o, obj_instances oi where \
-                    o.id = oi.o_id and o.name = ? and oi.owner = ?", (session.p_id, item))
+                    o.id = oi.o_id and o.name = ? and oi.owner = ?", (pid, item))
         return cu.fetchone()
     
-    def getItemsOnNpc(self, session, npc):
+    def getItemsOnNpc(self, npc):
         cu.execute("select oi.o_id,o.id,o.name,oi.npc_owner \
                     from obj_instances oi,objects where oi.o_id = o.id\
                     and oi.npc_owner = ?", (npc,))
@@ -40,16 +40,16 @@ class Select:
     
     def getNpcInRoom(self, loc, npc):
         cu.execute("select ni.id from npc_instances ni where ni.location = ? and \
-                    ni.n_id = (select id from npcs where name = ?)", (loc, npc)
+                    ni.n_id = (select id from npcs where name = ?)", (loc, npc))
         self.mob = cu.fetchone()
     
-    def getItem(self, session, item):
+    def getItem(self, loc, item):
         cu.execute("select id,o_id from obj_instances where location=? and owner is NULL and \
-        o_id = (select id from objects where name = ?)", (int(session.is_in), item))
+        o_id = (select id from objects where name = ?)", (loc, item))
         return cu.fetchone()
     
-    def getExit(self, session, exit):
-        cu.execute("select origin, dest, exit from links where origin = ? and exit = ?", (session.is_in, exit))
+    def getExit(self, loc, exit):
+        cu.execute("select origin, dest, exit from links where origin = ? and exit = ?", (loc, exit))
         return cu.fetchone()
     
     def getHelp(self, command):
@@ -60,42 +60,42 @@ class Select:
         cu.execute("select command from helps")
         return cu.fetchall()
     
-    def getInventory(self, session):
-        cu.execute("select o.name from objects o, obj_instances oi where oi.owner = ? and o.id = oi.o_id", (session.p_id,))
+    def getInventory(self, pid):
+        cu.execute("select o.name from objects o, obj_instances oi where oi.owner = ? and o.id = oi.o_id", (pid,))
         return cu.fetchall()
     
-    def getRoomDesc(self, session):
-        cu.execute("select s_desc,l_desc from rooms where id = ?", (session.is_in,))
+    def getRoomDesc(self, loc):
+        cu.execute("select s_desc,l_desc from rooms where id = ?", (loc,))
         return cu.fetchone()
     
     def getRoom(self, rid):
         cu.execute("select id from rooms where id = ?", (rid,))
         return cu.fetchone()
         
-    def getPlayersInRoom(self, session):
-        cu.execute("select name from players where location = ?", (session.is_in,))
+    def getPlayersInRoom(self, loc):
+        cu.execute("select name from players where location = ?", (loc,))
         return cu.fetchall()
     
-    def getNpcsInRoom(self, session, named = None):
+    def getNpcsInRoom(self, loc, named = None):
         if not named:
-            cu.execute("select name from npcs where id in (select n_id from npc_instances where location = ?)", (session.is_in,))
+            cu.execute("select name from npcs where id in (select n_id from npc_instances where location = ?)", (loc,))
             return cu.fetchall()
         else:
             cu.execute("select ni.id, npcs.name, npcs.description from npc_instances ni,npcs where \
-                       npcs.id = ni.n_id and npcs.name = ? and ni.location = ?", (named, session.is_in))
+                       npcs.id = ni.n_id and npcs.name = ? and ni.location = ?", (named, loc))
             return cu.fetchone()
     
-    def getItemsInRoom(self, session, named = None):
+    def getItemsInRoom(self, loc, pid, named = None):
         if not named:
-            cu.execute("select o.name,oi.o_id,count(*) from objects o,obj_instances oi where o.id = oi.o_id and oi.location = ?", (session.is_in,))
+            cu.execute("select o.name,oi.o_id,count(*) from objects o,obj_instances oi where o.id = oi.o_id and oi.location = ?", (loc,))
             return cu.fetchall()
         else:
             cu.execute("select o.name, o.description from objects o, obj_instances oi where \
-                       o.id = oi.o_id and o.name = ? and oi.location = ?", (session.p_id, named, session.is_in))
+                       o.id = oi.o_id and o.name = ? and oi.location = ?", (pid, named, loc))
             return cu.fetchone()
     
-    def getExitsInRoom(self, session):
-        cu.execute("select exit,id from links where origin = ?", (session.is_in,))
+    def getExitsInRoom(self, loc):
+        cu.execute("select exit,id from links where origin = ?", (loc,))
         return cu.fetchall()
     
     def getItemInstance(self, pid, object):
@@ -150,28 +150,28 @@ class Select:
     
 class Update:
     
-    def setDescription(self, session, line):
-        cu.execute("update players set description = ? where id = ?", (line, session.p_id))
+    def setDescription(self, pid, line):
+        cu.execute("update players set description = ? where id = ?", (line, pid))
         return cu.rowcount
         
-    def setItemOwner(self, session, new_owner, obj_id):
+    def setItemOwner(self, new_owner, obj_id):
         cu.execute("update obj_instances set owner = ?, location = NULL, npc_owner = NULL where id = ?", (new_owner, obj_id))
         return cu.rowcount
 
-    def setItemNpcOwner(self, session, new_owner, obj_id):
+    def setItemNpcOwner(self, new_owner, obj_id):
         cu.execute("update obj_instances set npc_owner = ?, location = NULL, owner = NULL where id = ?", (new_owner, obj_id))
         return cu.rowcount
         
-    def dropItem(self, session, obj_id):
-        cu.execute("update obj_instances set owner = NULL, location = ?, npc_owner = NULL where id = ?", (session.is_in, obj_id))
+    def dropItem(self, loc, obj_id):
+        cu.execute("update obj_instances set owner = NULL, location = ?, npc_owner = NULL where id = ?", (loc, obj_id))
         return cu.rowcount
         
-    def setLocation(self, session, where):
-        cu.execute("update players set location = ? where id = ?", (where, session.p_id))
+    def setLocation(self, pid, where):
+        cu.execute("update players set location = ? where id = ?", (where, pid))
         return cu.rowcount
         
-    def setColors(self, session, color):
-        cu.execute("update players set colors = ? where id = ?", (color, session.p_id))
+    def setColors(self, pid, color):
+        cu.execute("update players set colors = ? where id = ?", (color, pid))
         return cu.rowcount
         
     def banPlayer(self, player):
@@ -190,10 +190,6 @@ class Update:
         cu.execute("update rooms set l_desc = ? where id = ?", (desc, room))
         return cu.rowcount
         
-    def setLocation(self, room, pid):
-        cu.execute("update players set location = ? where id = ?", (room, p_id))
-        return cu.rowcount
-        
     def setItemDescription(self, item, desc):
         cu.execute("update objects set description = ? where name = ?", (desc, item))
         return cu.rowcount
@@ -201,6 +197,9 @@ class Update:
     def setNpcDesc(self, npc, desc):
         cu.execute("update npcs set description = ? where id = ?", (desc, npc))
         return cu.rowcount
+    
+    def setLastAction(self, time, pid):
+        cu.execute("update players set last_action = ? where id = ?", (time, pid))
         
         
 class Insert:
@@ -246,7 +245,7 @@ class Delete:
         return cu.rowcount
         
     def deleteItem(self, item):
-        cu.execute("delete from obj_instances where o_id = ?", (item,)
+        cu.execute("delete from obj_instances where o_id = ?", (item,))
         cu.execute("delete from objects where id = ?", (item,))
         return cu.rowcount
                    

@@ -4,6 +4,10 @@ import socket, asyncore, time, sys, ConfigParser
 from login import *
 from admin import *
 
+from model import Select, Update
+Update = Update()
+Select = Select()
+
 from TelnetIAC import TelnetTalk
 
 # Initial configuration file reading.
@@ -31,8 +35,7 @@ class Handler:
 
     def handle(self, session, line):
         #Time of last command executed. Will be used for external timeout cleanup.
-        cu.execute("update players set last_action = ? where id = ?",\
-                   (time.time(), session.p_id))
+        Update.setLastAction(time.time(), session.p_id)
 
         if not line.strip(): session.push("> ")
 

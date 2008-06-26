@@ -41,7 +41,7 @@ class Select:
     def getNpcInRoom(self, loc, npc):
         cu.execute("select ni.id from npc_instances ni where ni.location = ? and \
                     ni.n_id = (select id from npcs where name = ?)", (loc, npc))
-        self.mob = cu.fetchone()
+        return cu.fetchone()
     
     def getItem(self, loc, item):
         cu.execute("select id,o_id from obj_instances where location=? and owner is NULL and \

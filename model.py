@@ -14,8 +14,12 @@ class Select:
         cu.execute("select id from players where location = ?", (where,))
         return cu.fetchall()
     
-    def getPlayerInRoom(self, session, player):
-        cu.execute("select id from players where name = ? and location = ?", (player, session.is_in))
+    def getPlayerInRoom(self, loc, player):
+        cu.execute("select id from players where name = ? and location = ?", (player, loc))
+        return cu.fetchone()
+    
+    def getPlayerByName(self, player):
+        cu.execute("select id,name from players where name = ?", (player,))
         return cu.fetchone()
     
     def getPlayerDesc(self, session, player):
@@ -34,9 +38,9 @@ class Select:
                     and oi.npc_owner = ?", (npc,))
         return cu.fetchall()
     
-    def getNpcInRoom(self, session, npc):
+    def getNpcInRoom(self, loc, npc):
         cu.execute("select ni.id from npc_instances ni where ni.location = ? and \
-                    ni.n_id = (select id from npcs where name = ?)", (session.is_in, npc)
+                    ni.n_id = (select id from npcs where name = ?)", (loc, npc)
         self.mob = cu.fetchone()
     
     def getItem(self, session, item):
@@ -91,12 +95,12 @@ class Select:
             return cu.fetchone()
     
     def getExitsInRoom(self, session):
-        cu.execute("select exit from links where origin = ?", (session.is_in,))
+        cu.execute("select exit,id from links where origin = ?", (session.is_in,))
         return cu.fetchall()
     
-    def getItemInstance(self, session, object):
+    def getItemInstance(self, pid, object):
         cu.execute("select oi.id, o.name from obj_instances oi, objects o \
-                    where oi.owner = ? and o.name = ? and o.id = oi.o_id", (session.p_id, object))
+                    where oi.owner = ? and o.name = ? and o.id = oi.o_id", (pid, object))
         return cu.fetchone()
     
     def getBannedPlayers(self):
@@ -127,8 +131,20 @@ class Select:
         cu.execute("select id,name from npcs where name = ?", (npc,))
         return cu.fetchone()
     
+    def getEmail(self, player):
+        cu.execute("select name,email from players where name = ?", (player,))
+        return cu.fetchone()
+    
     def listObjectInstances(self):
         cu.execute("select id,o_id,owner,location from obj_instances")
+        return cu.fetchall()
+    
+    def listNpcs(self):
+        cu.execute("select id,name,description from npcs")
+        return cu.fetchall()
+    
+    def listPlayers(self):
+        cu.execute("select id,name,email from players")
         return cu.fetchall()
     
     
@@ -189,10 +205,15 @@ class Update:
         
 class Insert:
     
-    def addRoom(self):
-        cu.execute("insert into rooms(id, s_desc, l_desc) values (NULL,'A room','Set the description.')")
+    def addRoom(self, sdesc = None, room_id = None):
+        if sdesc:
+            cu.execute("insert into rooms(id, s_desc, l_desc) values(NULL,?,'Set description.')", (sdesc,))
+        elif room_id:
+            cu.execute("insert into rooms(id, s_desc, l_desc) values (%s,'A room', 'No description')" % (room_id,))
+        else:
+            cu.execute("insert into rooms(id, s_desc, l_desc) values (NULL,'A room','Set the description.')")
         return cu.lastrowid
-    
+
     def addLink(self, orig, exit, dir):
         cu.execute("insert into links(id, origin, dest, exit) values (NULL, ?, ?, ?)", (orig, exit, dir))
         
@@ -240,6 +261,8 @@ class Delete:
         cu.execute("delete from npc_instances where id = ?", (npc,))
         return cu.rowcount
     
+    def deletePlayer(self, player):
+        cu.execute("delete from players where name = ?", (player,))
     
     
         

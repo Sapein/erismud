@@ -217,16 +217,14 @@ class AdminCmds:
         else: session.push("This NPC does not exist.\r\n")
 
     def do_listnpcs(self, session, line):
-        cu.execute("select id,name,description from npcs")
-        self.whole = cu.fetchall()
+        self.whole = Select.listNpcs()
 
         session.push("%5s %10s %6s\r\n" % ("ID", "NAME", "DESC"))
         for i in self.whole:
             session.push("%5s %10s %6s\r\n" % (str(i[0]), str(i[1]), str(i[2])))
 
     def do_listplayers(self, session, line):
-        cu.execute("select id,name,email from players")
-        self.allplay = cu.fetchall()
+        self.allplay = Select.listPlayers()
 
         session.push("%5s %15s %20s\r\n" % ("ID", "NAME", "EMAIL"))
         for i in self.allplay:
@@ -236,7 +234,7 @@ class AdminCmds:
         cu.execute("select id,name from players where name = ?", (line.lower(),))
         self.getrid = cu.fetchone()
         try:
-            cu.execute("delete from players where name = ?", (self.getrid[1],))
+            Delete.deletePlayer(self.getrid[1])
             session.push("Player %s has been completely wiped out of the system.\r\n" % line.capitalize())
         except:
             session.push("Player %s not found in the database.\r\n" % line.capitalize())
@@ -246,54 +244,52 @@ class AdminCmds:
         if not line: session.push("Usage: edig <exit> <room name/short description>\r\n")
         else:
             self.splitarg = line.split(' ', 1)
-            cu.execute("select id,exit from links where origin = ?", (session.is_in,))
-            self.exists = cu.fetchall()
+            self.exists = Select.getExitsInRoom(session.is_in)
 
             try:
                 self.flat = c.flatten(self.exists)
-                if self.splitarg[0] in self.flat:
+                if self.splitarg[1] in self.flat:
                     session.push("This exit already exists here.\r\n")
                 else:
-                    cu.execute("insert into rooms(id, s_desc, l_desc) values(NULL,?,'Set description.')", (self.splitarg[1],))
-                    self.count = cu.lastrowid
-                    cu.execute("insert into links(id,origin,dest,exit) values(NULL,?,?,?)", (session.is_in, self.count, self.splitarg[0]))
-                    cu.execute("insert into links(id,origin,dest,exit) values(NULL,?,?,?)", (self.count, session.is_in, self.twoway[self.splitarg[0]]))
-                    session.push("New room created %s of here.\r\n" % self.splitarg[0])
+                    self.count = Insert.addRoom(self.splitarg[0])
+                    Insert.addLink(session.is_in, self.count, self.splitarg[1])
+                    Insert.addLink(self.count, session.is_in, self.twoway[self.splitarg[1]])
+                    session.push("New room created %s of here.\r\n" % self.splitarg[1])
             except:
                 session.push("Usage: edig <exit> <room name/short description>\r\n")
 
-    def do_addalias(self, session, line):
-        if not line: session.push("Correct syntax: addalias <name> <alias>\r\n")
-        else:
-            line = line.lower()
-            self.splitarg = line.split(' ', 1)
+    ### Commented out, it's not useful for now.
+    ###
+    #def do_addalias(self, session, line):
+        #if not line: session.push("Correct syntax: addalias <name> <alias>\r\n")
+        #else:
+            #line = line.lower()
+            #self.splitarg = line.split(' ', 1)
 
-            cu.execute("select id,alias,name from objects where name = ?", (self.splitarg[0],))
-            self.test = cu.fetchone()
+            #cu.execute("select id,alias,name from objects where name = ?", (self.splitarg[0],))
+            #self.test = cu.fetchone()
 
-            if self.test != []:
-                try:
-                    if self.test[1] != None:
-                        self.add = "%s:%s" % (self.test[1], self.splitarg[1])
-                        cu.execute("update objects set alias = ? where name = ?", (self.add, self.splitarg[0]))
-                    else:
-                        cu.execute("update objects set alias = ? where name = ?", (self.splitarg[1], self.splitarg[0]))
-                except: raise
+            #if self.test != []:
+                #try:
+                    #if self.test[1] != None:
+                        #self.add = "%s:%s" % (self.test[1], self.splitarg[1])
+                        #cu.execute("update objects set alias = ? where name = ?", (self.add, self.splitarg[0]))
+                    #else:
+                        #cu.execute("update objects set alias = ? where name = ?", (self.splitarg[1], self.splitarg[0]))
+                #except: raise
 
     def do_email(self, session, line):
         if not line: session.push("Correct syntax:\r\nemail <name>\r\n")
         else:
-            cu.execute("select name,email from players where name = ?", (line.lower(),))
-            self.email = cu.fetchone()
-            if self.email != []:
-                session.push("%s: %s\r\n" % (str(self.email[0]), str(self.email[1])))
+            self.email = Select.getEmail(line.lower())
+            if self.email:
+                session.push("%s: %s\r\n" % (self.email[0], self.email[1]))
             else:
                 session.push("Player not found.\r\n")
 
     def do_kickout(self, session, line):
         try:
-            cu.execute("select id,name from players where name = ?", (line.lower(),))
-            self.kicked = cu.fetchone()
+            self.kicked = Select.getPlayerByName(line.lower())
             self.kick = self.sessions[self.kicked[0]]
             self.kick.shutdown(0)
         except:
@@ -318,20 +314,15 @@ class AdminCmds:
             if self.start in got_this:
 
                 for i in got_this:
-                    cu.execute( "insert into rooms(id, s_desc, l_desc) values (%s,'A room', 'No description')" % (int(i),))
+                    Insert.addRoom(int(i))
 
-                cu.execute( 'insert into links(origin, dest, exit) values ("%s", "%s", "%s")' % (str(session.is_in), str(self.start), str(self.dir)))
-                cu.execute( 'insert into links(id, origin, dest, exit) \
-                            values (NULL, "%s", "%s", "%s")' % (self.start, str(session.is_in), str(self.twoway[self.dir])))
+                Insert.addLink(session.is_in, self.start, self.dir)
+                Insert.addLink(self.start, session.is_in, self.twoway[self.dir])
 
                 for i in got_this.items():
                     for j in i[1]:
-                        cu.execute('insert into links(id, origin, dest, exit) values (NULL, "%s", "%s", "%s")' % (str(i[0]), str(j[1]), str(j[0])))					
+                        Insert.addLink(str(i[0]), str(j[1]), str(j[0]))
 
                 session.push("Map imported successfully.\r\n")
 
             else: session.push("Connected room not found on the map.\r\n")
-
-
-
-

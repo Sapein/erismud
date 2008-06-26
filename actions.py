@@ -67,13 +67,13 @@ class Actions:
 
             if self.parts[1] == "to":
                 try:
-                    self.itom = Select.getItemInstance(session, self.parts[0].lower()) # Given item info
+                    self.itom = Select.getItemInstance(session.p_id, self.parts[0].lower()) # Given item info
 
                     # Check if given to a player.
-                    self.transf = Select.getPlayerInRoom(session, self.parts[2].lower())
+                    self.transf = Select.getPlayerInRoom(session.is_in, self.parts[2].lower())
 
                     # Check if given to a mob.
-                    self.mob = Select.getNpcInRoom(session, self.parts[2].lower())
+                    self.mob = Select.getNpcInRoom(session.is_in, self.parts[2].lower())
 
                     if self.transf:
                         Update.setItemOwner(session, self.transf[0], self.itom[0])

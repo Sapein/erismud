@@ -3,6 +3,7 @@
   Separate all queries in a "model" file.
 * The current files organization is a mess, clean up all the imports and shit.
 * Add an easy way of subclassing Handler()
+* eris.py/handle_close() needs to be optimized.
 
 * Make it possible to refer to instances with a number. So if I have two swords
   in my inventory, use 'look sword 1' and 'look sword 2' to differentiate them.

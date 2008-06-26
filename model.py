@@ -6,6 +6,10 @@ class Select:
         cu.execute("select id from players where location > 0")
         return cu.fetchall()
     
+    def getAllPlayersWithIP(self):
+        cu.execute("select id from players where ip_addr <> NULL")
+        return cu.fetchall()
+    
     def getAllPlayerNames(self):
         cu.execute("select name from players where location > 0")
         return cu.fetchall()
@@ -20,6 +24,10 @@ class Select:
     
     def getPlayerByName(self, player):
         cu.execute("select id,name from players where name = ?", (player,))
+        return cu.fetchone()
+    
+    def getPlayerByID(self, pid):
+        cu.execute("select id,name from players where id = ?", (pid,))
         return cu.fetchone()
     
     def getPlayerDesc(self, loc, player):
@@ -135,6 +143,10 @@ class Select:
         cu.execute("select name,email from players where name = ?", (player,))
         return cu.fetchone()
     
+    def getColors(self, player):
+        cu.execute("select colors from players where id = ?", (player,))
+        return cu.fetchone()[0]
+    
     def listObjectInstances(self):
         cu.execute("select id,o_id,owner,location from obj_instances")
         return cu.fetchall()
@@ -200,6 +212,15 @@ class Update:
     
     def setLastAction(self, time, pid):
         cu.execute("update players set last_action = ? where id = ?", (time, pid))
+        
+    def setIP(self, ip, pid):
+        cu.execute("update players set ip_addr = ? where id = ?", (ip, pid))
+        
+    def LogoutPlayer(self, pid):
+        cu.execute("update players set location = 0, ip_addr = NULL where id = ?", (pid,))
+        
+    def resetAllIPs(self):
+        cu.execute("update players set ip_addr = NULL")
         
         
 class Insert:

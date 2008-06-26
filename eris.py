@@ -20,10 +20,9 @@ ipsessions = {}
 
 logger = open(config.get("logging", "logfile"), 'a')
 def Log(line):
-    "Just call Log('text') to log to a file."
-    timer = ''
+    "Just call Log('text') to log to the main log file."
     timer = time.asctime()
-    logger.write(line + " " + timer + "\n")
+    logger.write("%s %s\n" %s (line, timer))
     logger.flush()
 
 
@@ -112,19 +111,16 @@ class EnterGame(Handler):
             session.push("You are already connected!\r\n\r\n")
             raise EndSession
 
-        cu.execute("update players set location = 1 where id = ?", (session.p_id,))
         sessions[session.p_id] = session
         ipsessions[session.p_id] = session.addr[0]
-        cu.execute("update players set ip_addr = ? where id = ?", (session.addr[0], session.p_id))
+        Update.setIP(session.addr[0], session.p_id)
+        
         #Store the player's starting location in the socket object.
         session.is_in = 1
-
-        cu.execute("select colors from players where id = ?", (session.p_id,))
-        self.color = cu.fetchone()
+        Update.setLocation(session.p_id, 1)
 
         # Check if the user supports ANSI colors
-        if self.color[0] == "on":
-            Actions.do_setansi(session, "on")
+        if Select.getColors(session.p_id) == "on": Actions.do_setansi(session, "on")
         else: Actions.do_setansi(session, "off")
 
         for i in sessions:
@@ -176,61 +172,61 @@ class SecondServSock(async_chat):
             self.tesb = str(self.sock)
             try:
                 if (self.ipaddr[0] == i[1]) & (self.test == self.tesb):
-                    cu.execute("select name from players where id = ?", (i[0],))
-                    self.leaver = cu.fetchone()
+                    self.leaver = Select.getPlayerByID(i[0])
+                    self.leaver = self.leaver[1].capitalize()
                     #In any case, if the player exits, remove him.
-                    cu.execute("update players set location = 0,ip_addr = NULL where id = ?", (i[0],))
-                    Log("Disconnected from %s" % (self.ipaddr[0],))
+                    Update.LogoutPlayer(i[0])
+                    Log("%s disconnected from %s" % (self.leaver, self.ipaddr[0]))
+                    print "%s logged out." % self.leaver
 
                     del sessions[i[0]]
                     del ipsessions[i[0]]
 
-                    cu.execute("select id from players where ip_addr <> NULL")
-                    self.locali = cu.fetchall()
-                    self.leaver = self.leaver[0].capitalize()
-                    print "%s logged out." % self.leaver
+                    self.locali = Select.getAllPlayersWithIP()
+                    
                     for j in self.locali:
                         self.tmpsec = sessions[j[0]]
-                        if self.tmpsec == None: # Shouldn't happpen, do some cleaning
-                            cu.execute("update players set location = 0,ip_addr = NULL where id = ?", (j[0],))
+                        if self.tmpsec == None: # Shouldn't happen, do some cleaning
+                            Update.LogoutPlayer(j[0])
                         else:
                             self.tmpsec.push("%s leaves the game.\r\n\r\n> " % (self.leaver,))
 
                     async_chat.handle_close(self)
                 else: raise
-            except: pass
+            except: raise
 
     def enter(self, room):
         self.room = room
         room.add(self)
 
 
-#
-#// Time related actions
-#
+###
+# Time related actions
+# * All commented out for now since it's not used.
+###
 
-schedule = {'heal':100.0}
-lastrun = {}
+#schedule = {'heal':100.0}
+#lastrun = {}
 
-def heal():
-    pass
-    #cu.execute("update pnames set curhp=curhp+1 where p_id=? and curhp<maxhp", session.p_id)
+#def heal():
+    #pass
+    ###cu.execute("update pnames set curhp=curhp+1 where p_id=? and curhp<maxhp", session.p_id)
 
 
-# The timer loop
-def Timer(timer):
+### The timer loop
+#def Timer(timer):
 
-    sched = schedule.iteritems()
-    for i in sched:
-        try: lastrun[i[0]]
-        except: lastrun[i[0]] = time.time()
+    #sched = schedule.iteritems()
+    #for i in sched:
+        #try: lastrun[i[0]]
+        #except: lastrun[i[0]] = time.time()
 
-        diff = timer - lastrun[i[0]]
+        #diff = timer - lastrun[i[0]]
 
-        # Every 100 seconds, run heal(), defined above.
-        if diff >= schedule['heal']:
-            heal()
-            lastrun['heal'] = time.time()
+        ### Every 100 seconds, run heal(), defined above.
+        #if diff >= schedule['heal']:
+            #heal()
+            #lastrun['heal'] = time.time()
 
 
 class MainServSock(dispatcher):
@@ -249,7 +245,7 @@ class MainServSock(dispatcher):
 
 if __name__ == '__main__':
     s = MainServSock(int(config.get("server", "port")))
-    cu.execute("update players set ip_addr = NULL")
+    Update.resetAllIPs()
 
     try:
         import actions

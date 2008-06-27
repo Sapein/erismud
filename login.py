@@ -4,6 +4,10 @@ from random import randrange, getrandbits
 from asynchat import simple_producer
 cu = tables.cu
 
+from model import Select, Insert
+Insert = Insert()
+Select = Select()
+
 from TelnetIAC import TelnetTalk
 
 try:
@@ -71,24 +75,21 @@ class FirstLogin:
         return ma.hexdigest()
 
     def check_password(self, passtest):
-        cu.execute("select passwd,salt from players where name = ?", (self.plname,))
-        cchk = cu.fetchall()[0]
+        self.cchk = Select.getPassword(self.plname)
 
-        test = self.encpass(passtest, cchk[1])
-        if test == cchk[0]: return 0
+        self.test = self.encpass(passtest, self.cchk[1])
+        if self.test == self.cchk[0]: return 0
         else: return -1
         
     def check_ban(self, uname):
-        cu.execute("select banned from players where name = ?", (uname,))
-        self.bchk = cu.fetchall()[0]
+        self.bchk = Select.getBan(uname)
 
         if self.bchk[0] == 1: return 1
         else: return 0
 
     def handle(self, session, cmd):
         """ This is ugly. asynchat doesn't implement interactive sessions so we have
-			to simulate a dialog using a counter that is incremented at every step.
-		"""
+            to simulate a dialog using a counter that is incremented at every step."""
 
         if not cmd: cmd = " "
 
@@ -124,13 +125,11 @@ class FirstLogin:
                 return
 
             try:
-                cu.execute("select name from players where name = ?", (self.plname,))
-                self.nak = cu.fetchone()
-                session.push(str("Welcome in, %s\r\n" % self.nak[0].capitalize()))
+                self.nak = Select.getPlayerByName(self.plname)
+                session.push(str("Welcome in, %s\r\n" % self.nak[1].capitalize()))
                 session.push("Password: ")
                 self.echo_off(session)
                 self.step = 5 # Existing user
-                #return self
             except: 
                 session.push("New player! Welcome to ErisMUD!\r\n")
                 self.plname = str(self.plname)
@@ -178,8 +177,7 @@ class FirstLogin:
                     session.close()
                 else:
                     session.push("\r\nYou've logged in successfully!\r\n\r\n")
-                    session.push("Press <enter> to join.\r\n")
-                    session.push("> ")
+                    session.push("Press <enter> to join.\r\n>")
                     self.step = 8
             else:
                 session.push("Wrong password.\r\n")
@@ -209,8 +207,7 @@ class FirstLogin:
                 self.step = 7
 
         elif self.step == 8:
-            cu.execute("select id,ip_addr from players where name = ?", (self.plname,))
-            self.nak = cu.fetchone()
+            self.nak = Select.getIP(self.plname)
 
             if self.nak[1] != None and self.nak[1] != "127.0.0.1":
                 session.push("This player is already in.\r\n")
@@ -219,53 +216,19 @@ class FirstLogin:
                 # Store some basic info into the socket object.
                 session.p_id = self.nak[0]
                 session.pname = str(self.plname.capitalize())
-                #session.ipaddr = self.ipaddr[0]
 
                 session.push("> ")
                 session.enter(self.server.enterg)
-                #EnterGame.add(self)
-                #return self
 
         else:
             session.push("Something is wrong, contact the admin.\r\n")
 
     def createUser(self, session, pname, ppass):
-        # Initialize attributes
-        # self.stre = randrange(15, 60)
-        # self.stm = randrange(15, 60)
-        # self.dex = randrange(15, 60)
-        # self.agl = randrange(15, 60)
-        # self.intl = randrange(15, 60)
-        # self.wil = randrange(15, 60)
-        # self.prs = randrange(15, 60)
-        # self.per = randrange(15, 60)
-        # self.app = randrange(15, 60)
-        # session.push("Your stats are:\r\n")
-        # session.push("Strength: " + str(self.stre) + "\r\n")
-        # session.push("Stamina: " + str(self.stm) + "\r\n")
-        # session.push("Dexterity: " + str(self.dex) + "\r\n")
-        # session.push("Agility: " + str(self.agl) + "\r\n")
-        # session.push("Intelligence: " + str(self.intl) + "\r\n")
-        # session.push("Willpower: " + str(self.wil) + "\r\n")
-        # session.push("Presence: " + str(self.prs) + "\r\n")
-        # session.push("Perception: " + str(self.per) + "\r\n")
-        # session.push("Appearance: " + str(self.app) + "\r\n")
-
         self.salty = self.generate_salt()
         self.truepass = self.encpass(ppass, self.salty)
 
         self.test = (pname, self.email, self.truepass, self.salty, self.ansi)
-        cu.execute("insert into players(id,name,email,passwd,salt,location,description,colors)\
-                   values (NULL,?,?,?,?,0,'Description not set',?)", self.test)
-
-        # Initialize skills
-        # cu.execute("select p_id from pnames where names = ?", [self.plname])
-        # self.pook = cu.fetchall()
-        #self.skil = (randrange(1, 20), randrange(1, 20), 0)
-        # cu.execute("insert into skills(p_id, disguise, dodge, evasion, juggling, sneak)\
-                    # values(?, ?, ?, ?, ?, ?)", (self.pook[0][0], 0, 0, 0, 0, 0))
-        # cu.execute("insert into learningpts(p_id, disguise, dodge, evasion, juggling, sneak)\
-                    # values(?, ?, ?, ?, ?, ?)", (self.pook[0][0], 0, 0, 0, 0, 0))
+        Insert.newPlayer(self.test)
 
         session.push("\r\nNew player created!\r\n")
         session.push("Press <enter> to join.\r\n")

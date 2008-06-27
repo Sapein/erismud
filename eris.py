@@ -21,8 +21,7 @@ ipsessions = {}
 logger = open(config.get("logging", "logfile"), 'a')
 def Log(line):
     "Just call Log('text') to log to the main log file."
-    timer = time.asctime()
-    logger.write("%s %s\n" %s (line, timer))
+    logger.write("%s -- %s\n" % (time.asctime(), line))
     logger.flush()
 
 

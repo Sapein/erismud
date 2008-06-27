@@ -10,6 +10,8 @@ Select = Select()
 
 from TelnetIAC import TelnetTalk
 
+import template as tpl
+
 try:
     motd = ""
     mot = open("motd.txt", "r")
@@ -103,12 +105,10 @@ class FirstLogin:
         if self.step == 1:
             self.plname = self.cmd.lower().strip()
             if not self.plname:
-                session.push("You will need a name. \r\n\r\n")
-                session.push("Please enter your name: ")
+                session.push(tpl.NAME_NO + tpl.NAME_INPUT)
                 return
             if not self.plname.isalpha():
-                session.push("You name can only contain letters.\r\n")
-                session.push("Please enter your name: ")
+                session.push(tpl.NAME_ALPHA + tpl.NAME_INPUT)
                 return
 
             wrongname = False
@@ -120,21 +120,20 @@ class FirstLogin:
             badnames.close()
 
             if wrongname:
-                session.push("This name is not allowed. Choose something else.\r\n")
-                session.push("Please enter your name: ")
+                session.push(tpl.NAME_BAD + tpl.NAME_INPUT)
                 return
 
             try:
                 self.nak = Select.getPlayerByName(self.plname)
-                session.push(str("Welcome in, %s\r\n" % self.nak[1].capitalize()))
-                session.push("Password: ")
+                session.push(str(tpl.WELCOME % self.nak[1].capitalize()))
+                session.push(tpl.PASSWORD)
                 self.echo_off(session)
                 self.step = 5 # Existing user
             except: 
-                session.push("New player! Welcome to ErisMUD!\r\n")
+                session.push(tpl.WELCOME_NEW)
                 self.plname = str(self.plname)
-                session.push(str("Your name is %s\r\n" % self.plname.capitalize()))
-                session.push("Please enter your password: ")
+                session.push(tpl.NAME_IS % self.plname.capitalize())
+                session.push(tpl.PASSWORD)
                 self.echo_off(session)
                 self.step = 2 # New user
 
@@ -142,11 +141,11 @@ class FirstLogin:
             #self.echo_on(session)
             self.fpass = self.cmd
             if not self.fpass:
-                session.push("Please enter a password: ")
+                session.push(tpl.PASSWORD)
                 self.echo_off(session)
                 return
             else:
-                session.push("\r\nConfirm your password: ")
+                session.push(tpl.PASSWORD_CONFIRM)
                 self.echo_off(session)
                 self.step = 3
 
@@ -154,11 +153,11 @@ class FirstLogin:
             self.spass = self.cmd
             if self.fpass == self.spass:
                 self.echo_on(session)
-                session.push("\r\nDo you want ANSI colors? (yes, no) ")
+                session.push(tpl.ANSI)
                 self.step = 6
             else:
-                session.push("Passwords don't match.\r\n")
-                session.push("Please enter your password: ")
+                session.push(tpl.PASSWORD_MISMATCH)
+                session.push(tpl.PASSWORD)
                 self.echo_off(session)
                 self.step = 2
 
@@ -166,22 +165,21 @@ class FirstLogin:
             self.echo_on(session)
 
             if not self.cmd:
-                session.push("Password: ")
+                session.push(tpl.PASSWORD)
                 self.echo_off(session)
                 return
 
             if self.check_password(self.cmd) == 0:
                 # Check if the user is banned.
                 if self.check_ban(self.plname) == 1:
-                    session.push("You have been banned. Get out.\r\n")
+                    session.push(tpl.BANNED)
                     session.close()
                 else:
-                    session.push("\r\nYou've logged in successfully!\r\n\r\n")
-                    session.push("Press <enter> to join.\r\n>")
+                    session.push(tpl.LOGIN + tpl.PRESS_ENTER)
                     self.step = 8
             else:
-                session.push("Wrong password.\r\n")
-                session.push("Password: ")
+                session.push(tpl.PASSWORD_WRONG)
+                session.push(tpl.PASSWORD)
                 self.echo_off(session)
 
         elif self.step == 6:
@@ -191,7 +189,7 @@ class FirstLogin:
                 self.ansi = 'on'
             else:
                 self.ansi = 'off'
-            session.push("What is your email address?\r\n")
+            session.push(tpl.EMAIL)
             self.step = 7
 
         elif self.step == 7: # CHANGE
@@ -202,15 +200,15 @@ class FirstLogin:
                 self.step = 8
                 self.createUser(session, self.plname, self.fpass)
             else:
-                session.push("Invalid format for an email address.\r\n")
-                session.push("What is your email address?\r\n")
+                session.push(tpl.EMAIL_BAD)
+                session.push(tpl.EMAIL)
                 self.step = 7
 
         elif self.step == 8:
             self.nak = Select.getIP(self.plname)
 
             if self.nak[1] != None and self.nak[1] != "127.0.0.1":
-                session.push("This player is already in.\r\n")
+                session.push(tpl.LOGIN_ALREADY_IN)
                 session.close()
             else:
                 # Store some basic info into the socket object.
@@ -221,7 +219,7 @@ class FirstLogin:
                 session.enter(self.server.enterg)
 
         else:
-            session.push("Something is wrong, contact the admin.\r\n")
+            session.push(tpl.ERROR_CRITICAL)
 
     def createUser(self, session, pname, ppass):
         self.salty = self.generate_salt()
@@ -230,8 +228,7 @@ class FirstLogin:
         self.test = (pname, self.email, self.truepass, self.salty, self.ansi)
         Insert.newPlayer(self.test)
 
-        session.push("\r\nNew player created!\r\n")
-        session.push("Press <enter> to join.\r\n")
+        session.push(tpl.NEW_PLAYER + tpl.PRESS_ENTER)
 
     def add(self, session):
         # First session reference

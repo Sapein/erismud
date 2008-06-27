@@ -1,5 +1,10 @@
 ERISMUD CHANGELOG
 
+2008-06-27 - M. Lanctot
+	* Finished the SQL model.
+	* Moved all the text in template.py 
+	  (so this is providing some kind of bastard MVC framework.)
+
 2008-06-25 - M. Lanctot
 	* Started to move all SQL into model.py
 	* Added a ban check at login.

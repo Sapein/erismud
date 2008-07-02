@@ -1,7 +1,6 @@
 import tables, ConfigParser
 from model import Select, Update
 from common import C
-import template as tpl
 
 #cu = tables.cu
 
@@ -11,7 +10,7 @@ Select = Select()
 config = ConfigParser.ConfigParser()
 config.read("eris.conf")
 
-class Actions:
+class Actions():
 
     def __init__(self, sessions):
         self.sessions = sessions
@@ -33,38 +32,40 @@ class Actions:
 
     def do_description(self, session, line):
         Update.setDescription(session.p_id, line)
-        session.push(tpl.DESC_SET)
+        session.push("Description set.\r\n")
 
     def do_drop(self, session, line):
         try:
-            self.drop = Select.getItemInstance(session, line.lower())
+            self.drop = Select.getItemInstance(session.p_id, line.lower())
 
-            self.drop = Update.dropItem(session.is_in, self.drop[1])
+            self.drop = Update.dropItem(session.is_in, self.drop[0])
             #self.msg = session.pname + " dropped " + line + "."
             #self.RoomBroadcast(session, session.is_in, self.msg)
-            session.push(tpl.DROP % (self.drop[0], line))
-        except: session.push(tpl.DROP_CANT)
+            #session.push("%s dropped %s.\r\n" % (self.drop[0], line))
+            session.push("%s dropped.\r\n" % (line))
+        except: session.push("You cannot drop this.\r\n")
 
     def do_emote(self, session, line):
-        if line == '' : session.push(tpl.EMOTE_DEFAULT)
+        if line == '' : session.push("You feel emotional.\r\n")
         else:
-            self.emote = " %s" % line
+            self.emote = ">" + line + "<"
             Effects.RoomBroadcast(session, session.is_in, self.emote)
-            session.push(tpl.EMOTE % (session.pname, self.emote))
+            session.push("Emote: %s %s \r\n" % (session.pname, self.emote))
 
     def do_get(self, session, line):
         self.objonfloor = Select.getItem(session.is_in, line.lower())
 
         try:
             Update.setItemOwner(session.p_id, self.objonfloor[0])
-            session.push(tpl.GET % line)
+            session.push("You pick up %s.\r\n" % line)
         except:
-            session.push(tpl.NOT_HERE)
+            session.push("This is not here.\r\n")
 
     def do_give(self, session, line):
-        if not line: session.push(tpl.SYNTAX_GIVE)
+        if not line: session.push("Correct syntax is: give <item> to <player>\r\n")
         else:
             self.argu = line.lower()
+            #if not self.argu.strip(): session.push("> ")
             self.parts = line.split(' ', 3)
 
             if self.parts[1] == "to":
@@ -79,37 +80,38 @@ class Actions:
 
                     if self.transf:
                         Update.setItemOwner(self.transf[0], self.itom[0])
-                        session.push(tpl.GIVE % (self.parts[0],self.parts[2]))
-                        self.RoomBroadcast(session, session.is_in, tpl.GIVES % (self.parts[0],self.parts[2]))
-
+                        session.push("You give %s to %s.\r\n" % (self.parts[0],self.parts[2]))
+                        # the following line is commented out -- not sure if I'll tell the whole room + it doesn't work
+                        #self.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0],self.parts[2]))
+                        
                     elif self.mob:
                         Update.setItemNpcOwner(self.mob[0], self.itom[0])
-                        session.push(tpl.GIVE % (self.parts[0], self.parts[2]))
-                        Effects.RoomBroadcast(session, session.is_in, tpl.GIVES % (self.parts[0], self.parts[2]))
-                    else: session.push(tpl.PLAYER_NOT_FOUND)
+                        session.push("You give %s to %s.\r\n" % (self.parts[0], self.parts[2]))
+                        Effects.RoomBroadcast(session, session.is_in, " gives %s to %s" % (self.parts[0], self.parts[2]))
+                    else: session.push("This person is not here.\r\n")
 
-                except: session.push(tpl.SYNTAX_GIVE)
+                except: session.push("Correct syntax is: give <item> to <player>\r\n")
 
-            else: session.push(tpl.SYNTAX_GIVE)
+            else: session.push("Correct syntax is: give <item> to <player>\r\n")
 
     def do_go(self, session, line):
-        if not line: session.push(tpl.DONT_GO)
+        if not line: session.push("You don't go anywhere.\r\n")
         else:
             try:
                 self.isexit = Select.getExit(session.is_in, line.lower())
             except:
-                session.push(tpl.NO_EXIT)
+                session.push("No exit this way.\r\n")
 
             try:
                 # Actually move
                 Update.setLocation(session.p_id , self.isexit[1])
-                Effects.RoomBroadcast(session, session.is_in, tpl.LEAVE % str(self.isexit[2]))
+                Effects.RoomBroadcast(session, session.is_in, " leaves %s." % str(self.isexit[2]))
                 session.is_in = self.isexit[1]
-                Effects.RoomBroadcast(session, session.is_in, tpl.ENTER)
+                Effects.RoomBroadcast(session, session.is_in, " enters the room.")
                 self.do_look(session, '') # Force a look, to be replaced by something nicer.
 
             except:
-                session.push(tpl.CANT_MOVE)
+                session.push("You can't move that way.\r\n")
 
     def do_help(self, session, line):
         if not line: # help command alone
@@ -128,12 +130,13 @@ class Actions:
             self.counter = int(self.counter)
             self.first = self.allhelp[:self.counter]
             self.second = self.allhelp[self.counter:]
-            session.push(tpl.HELP_TOPICS)
+            session.push("The following help topics exist:\r\n")
             for x, y in map(None, self.first, self.second):
                 if x == None:
                     x = ' '
                     session.push(str(x).ljust(15) + str(y).ljust(10) + "\r\n")
                 else: session.push(str(x).ljust(15) + str(y).ljust(10) + "\r\n")
+
 
         else: #If help <foo>
             try:
@@ -144,14 +147,14 @@ class Actions:
                     session.push("%s \r\n" % (i,))
                 session.push("\r\n")
             except:
-                session.push(tpl.NO_HELP)
+                session.push("Help is not available on this topic.\r\n")
 
     def do_inv(self, session, line):
         c = C(session)
 
         self.owned = Select.getInventory(session.p_id)
         self.owned = c.flatten(self.owned)
-        session.push(c.B_WHITE(tpl.INVENTORY))
+        session.push(c.B_WHITE("Inventory\r\n"))
 
         self.stufa = {}
         for i in self.owned:
@@ -168,7 +171,7 @@ class Actions:
         c = C(session)
         if not line: # Looking at the room itself
             self.descr = Select.getRoomDesc(session.is_in)
-            session.push("%s \r\n" % (c.CYAN(self.descr[0]),))			# short desc
+            session.push("%s \r\n" % (c.CYAN(self.descr[0]),))				# short desc
             session.push("%s \r\n" % self.descr[1].replace('\\n', '\r\n'))	# long desc
 
             # Players in the room.
@@ -190,16 +193,23 @@ class Actions:
                     session.push("%s%s%s %s\r\n" % (session.BOLD, session.MAGENTA, str(i[0]), session.RESET))
 
             if self.objonfloor != []:
+                comma = False
                 for i in self.objonfloor:
                     if not i[0] or not i[1]: pass
                     elif i[2] > 1:
-                        session.push("%s%s%s%s (%s) " % (session.BOLD,session.GREEN,str(i[0]),session.RESET,str(i[2])))
+                        if comma:
+                            session.push(", ")
+                        session.push("%s%s%s%s (%s)" % (session.BOLD,session.GREEN,str(i[0]),session.RESET,str(i[2])))
+                        comma = True
                     else:
+                        if comma:
+                            session.push(", ")
                         session.push("%s%s%s%s" % (session.BOLD,session.GREEN,str(i[0]),session.RESET))
+                        comma = True
                 session.push("\r\n")
 
             # List exits
-            session.push("%s%s%s " % (session.BOLD,session.CYAN, tpl.EXITS))
+            session.push("%s%sExits: " % (session.BOLD,session.CYAN))
             self.tmpgoto = Select.getExitsInRoom(session.is_in)
             for i in self.tmpgoto:
                 session.push("%s " % i[0])
@@ -216,18 +226,18 @@ class Actions:
             self.obj2 = Select.getItemsInRoom(session.is_in, session.p_id, line.lower())
 
             #Get list of mobs in the room.
-            self.mobonfloor = getNpcsInRoom(session.is_in, line.lower())
+            self.mobonfloor = Select.getNpcsInRoom(session.is_in, line.lower())
 
             try:
                 if self.peeps: #Looking at a player
                     session.push("%s \r\n" % self.peeps[1].replace('\\n', '\r\n'))
-                    Effects.RoomBroadcast(session, session.is_in, tpl.LOOKS_AT + line)
+                    Effects.RoomBroadcast(session, session.is_in, " looks at " + line)
 
                 elif self.obj: #An object in your inventory
                     session.push("%s \r\n" % self.obj[1].replace('\\n', '\r\n'))
                     
                 elif self.obj2: #An object on the floor
-                    session.push("%s \r\n" % self.obj[1].replace('\\n', '\r\n'))
+                    session.push("%s \r\n" % self.obj2[1].replace('\\n', '\r\n'))
 
                 elif self.mobonfloor: #A mob/NPC
                     self.mobinv = Select.getItemsOnNpc(self.mobonfloor[0])
@@ -239,7 +249,7 @@ class Actions:
                     if self.mobinv: # Print the mob's inventory
                         self.stuff = []
                         self.stufa = {}
-                        session.push(c.B_WHITE(tpl.INVENTORY))
+                        session.push(c.B_WHITE("Inventory:\r\n"))
 
                         for i in self.mobinv:
                             self.item_name = i[2]
@@ -252,13 +262,14 @@ class Actions:
                                 session.push("%s \r\n" % str(i))
                     else: pass
 
-                else: session.push(tpl.CANT_SEE)
-            except: session.push(tpl.CANT_SEE)
+                else: session.push("You do not see that here.\r\n")
+
+            except: session.push("ERROR - You do not see that here.\r\n")
 
     def do_say(self, session, line):
         if not line: pass
-        session.push(tpl.YOU_SAY % line)
-        Effects.RoomBroadcast(session, session.is_in, tpl.SAYS % line)
+        session.push("You say: %s \r\n" % line)
+        Effects.RoomBroadcast(session, session.is_in, "says: %s" % line)
 
     def do_setansi(self, session, arg):
         if arg == "on":
@@ -271,7 +282,7 @@ class Actions:
             session.BLACK, session.RED, session.GREEN, session.YELLOW, session.BLUE = '','','','',''
             session.MAGENTA, session.CYAN, session.WHITE, session.RESET, session.BOLD = '','','','',''
             Update.setColors(session.p_id, arg)
-        else: session.push(tpl.SYNTAX_ANSI)
+        else: session.push("Syntax:\r\nsetansi [off|on]\r\n")
 
     # def do_skills(self, session, line):
         # cu.execute("select * from skills where p_id = ?", (session.p_id,))
@@ -297,7 +308,7 @@ class Actions:
 
     def do_who(self, session, line):
         c = C(session)
-        session.push(tpl.WHO)
+        session.push("The following players are logged on:\r\n")
         self.whoin = Select.getAllPlayerNames()
         for i in self.whoin:
             session.push("%s\r\n" % (c.B_RED(i[0].capitalize()),))

@@ -37,7 +37,7 @@ class Select:
     
     def getItemsOnPlayer(self, pid, item):
         cu.execute("select o.name, o.description from objects o, obj_instances oi where \
-                    o.id = oi.o_id and o.name = ? and oi.owner = ?", (pid, item))
+                    o.id = oi.o_id and oi.owner = ? and o.name = ?", (pid, item))
         return cu.fetchone()
     
     def getItemsOnNpc(self, npc):
@@ -52,8 +52,17 @@ class Select:
         return cu.fetchone()
     
     def getItem(self, loc, item):
+        #cu.execute("select id,o_id from obj_instances where location=? and \
+        #o_id = (select id from objects where name = ?)", (loc, item)) 
+        
         cu.execute("select id,o_id from obj_instances where location=? and owner is NULL and \
         o_id = (select id from objects where name = ?)", (loc, item))
+        
+        #cu.execute("select id,o_id from obj_instances where location=? and owner=? and \
+        #o_id = (select id from objects where name = ?)", (loc, None, item))
+        
+        #cu.execute("select id,o_id from obj_instances where location=? and owner is NULL and \
+        #o_id = (select id from objects where name = ?)", (loc, item))
         return cu.fetchone()
     
     def getExit(self, loc, exit):
@@ -95,11 +104,19 @@ class Select:
     
     def getItemsInRoom(self, loc, pid, named = None):
         if not named:
-            cu.execute("select o.name,oi.o_id,count(*) from objects o,obj_instances oi where o.id = oi.o_id and oi.location = ?", (loc,))
+            #cu.execute("select o.name,oi.o_id,count(*) from objects o,obj_instances oi where o.id = oi.o_id and oi.location = ?", (loc,))
+            #changed to
+            cu.execute("select o.name, oi.o_id, count (*) from objects o, obj_instances oi where \
+                       oi.location = ? and o.id = oi.o_id group by oi.o_id", (loc,))
             return cu.fetchall()
         else:
             cu.execute("select o.name, o.description from objects o, obj_instances oi where \
-                       o.id = oi.o_id and o.name = ? and oi.location = ?", (pid, named, loc))
+                       o.id = ? and o.name = ? and oi.location = ?", (pid, named, loc))
+
+            #cu.execute("select o.name, o.description from objects o, obj_instances oi where \
+                       #o.id = oi.o_id and o.name = ? and oi.location = ?", (pid, named, loc))
+            
+            #select o.name, o.description from objects o, obj_instances oi where o.id = 1 and o.name = 'club' and oi.location = 2
             return cu.fetchone()
     
     def getExitsInRoom(self, loc):
@@ -115,17 +132,13 @@ class Select:
         cu.execute("select id, name from players where banned = 1")
         return cu.fetchall()
     
-    def getBan(self, player):
-        cu.execute("select banned from players where name = ?", (player,))
-        return cu.fetchone()
-    
     def getAllRooms(self):
         cu.execute("select id, s_desc from rooms")
         return cu.fetchall()
     
     def getLink(self, id):
         cu.execute("select id from links where id = ?", (id, ))
-        return cu.fetchone()
+        return cu.fetchonce()
     
     def getLocation(self):
         cu.execute("select id,name,location,ip_addr from players where location > 0")
@@ -136,7 +149,8 @@ class Select:
         return cu.fetchall()
     
     def getItemNameId(self, item):
-        cu.execute("select id, name from objects where id = ? or where name = ?", (item, item))
+        #cu.execute("select id, name from objects where id = ? or where name = ?", (item, item))
+        cu.execute("select id, name from objects where id = ? or name = ?", (item, item))
         return cu.fetchone()
     
     def getNpc(self, npc):
@@ -150,14 +164,6 @@ class Select:
     def getColors(self, player):
         cu.execute("select colors from players where id = ?", (player,))
         return cu.fetchone()[0]
-    
-    def getPassword(self, player):
-        cu.execute("select passwd,salt from players where name = ?", (player,))
-        return cu.fetchone()
-    
-    def getIP(self, player):
-        cu.execute("select id,ip_addr from players where name = ?", (player,))
-        return cu.fetchone()
     
     def listObjectInstances(self):
         cu.execute("select id,o_id,owner,location from obj_instances")
@@ -236,10 +242,6 @@ class Update:
         
         
 class Insert:
-    
-    def newPlayer(self, data):
-        cu.execute("insert into players(id,name,email,passwd,salt,location,description,colors)\
-                   values (NULL,?,?,?,?,0,'Description not set',?)", data)        
     
     def addRoom(self, sdesc = None, room_id = None):
         if sdesc:

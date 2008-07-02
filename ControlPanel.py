@@ -95,11 +95,11 @@ class CloseMenuItem(MenuItem):
 		self.parent.close()
 
 def showMain():
-    while True:
-        clear()
-        current_menu.draw_menu()
-        inp = raw_input("#> ")
-        current_menu.handle_response(inp)
+	while True:
+		clear()
+		current_menu.draw_menu()
+		inp = raw_input("#> ")
+		current_menu.handle_response(inp)
 
 def typeofStat():
 	while True:
@@ -113,33 +113,33 @@ def typeofStat():
 			return "Other"
 
 def addStat():
-    a = raw_input("Full name of the stat you want to add: ")
-    b = raw_input("Abbreviation of this stat: ")
-    c = typeofStat()
+	a = raw_input("Full name of the stat you want to add: ")
+	b = raw_input("Abbreviation of this stat: ")
+	c = typeofStat()
 
-    print "New Stat: " + a + " (" + b +"), " + c + "\r\n"
-
-    r = raw_input("Is this correct? (Y/N) ")
-
-    if r.lower() == "y":
-        statsD[a] = (b, c)
-        
-    elif r.lower() == "n":
-        print "Not saving the new stat.\r\n"
+	print "New Stat: " + a + " (" + b +"), " + c + "\r\n"
+    
+	r = raw_input("Is this correct? (Y/N) ")
+    
+	if r.lower() == "y":
+		statsD[a] = (b, c)
+	    
+	elif r.lower() == "n":
+		print "Not saving the new stat.\r\n"
 
 
 def delStat():
-    print "Current defined stats: "
-    for i in statsD: print i
-    print "\r\n"
-    d = raw_input("Which stat do you want to delete? ")
-    try:
-        del statsD[d]
-        print "Stat " + d + " deleted successfully.\r\n"
-        statsMenu()
-    except:
-        print "No such stat.\r\n"
-        statsMenu()
+	print "Current defined stats: "
+	for i in statsD: print i
+	print "\r\n"
+	d = raw_input("Which stat do you want to delete? ")
+	try:
+		del statsD[d]
+		print "Stat " + d + " deleted successfully.\r\n"
+		statsMenu()
+	except:
+		print "No such stat.\r\n"
+		statsMenu()
 
 def set_points_per_level():
         cnpts = raw_input("How many Stat points every level: ")

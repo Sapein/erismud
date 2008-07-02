@@ -1,6 +1,7 @@
-import tables, time
+import tables
 from common import C
 from model import Select, Update, Insert, Delete
+import template as tpl
 
 Update = Update()
 Select = Select()
@@ -23,23 +24,23 @@ class AdminCmds:
     def do_addroom(self, session, line):
         try:
             self.rid = Insert.addRoom()
-            session.push("Your new room has id #%d.\r\n" % self.rid)
+            session.push(tpl.ADDROOM % self.rid)
         except:
-            session.push("Something didn't work.\r\n")
+            session.push(tpl.ADDROOM_ERR)
 
     def do_ban(self, session, line):
         try:
             Update.banPlayer(line.lower())
-            session.push("%s has been banned and will not be able to log back in. Use <unban> to undo.\r\n" % line)
+            session.push(tpl.BAN % line)
         except:
-            session.push("Impossible to ban that player.\r\n")
+            session.push(tpl.BAN_ERR)
 
     def do_unban(self, session, line):
         try:
             Update.unbanPlayer(line.lower())
-            session.push("%s has been unbanned.\r\n" % line)
+            session.push(tpl.UNBAN % line)
         except:
-            session.push("Impossible to unban that player.\r\n")
+            session.push(tpl.UNBAN_ERR)
 
     def do_listbans(self, session):
         self.whole = Select.getBannedPlayers()
@@ -52,9 +53,9 @@ class AdminCmds:
             self.fop = Select.getRoom(line)
             Delete.deleteRoom(self.fop[0])
             Delete.deleteLink(self.fop[0])
-            session.push("Room #%s and all of its links have been deleted.\r\n" % (fop,))
+            session.push(tpl.DELROOM % (fop,))
         except:
-            session.push("Unable to find this room.\r\nCorrect syntax: delroom <room ID>\r\n")
+            session.push(tpl.DELROOM_ERR)
 
     def do_listrooms(self, session, line):
         self.whole = Select.getAllRooms()
@@ -63,7 +64,7 @@ class AdminCmds:
             session.push("%6s %15s\r\n" % (str(i[0]), str(i[1])))
 
     def do_addlink(self, session, line):
-        if not line: session.push("Correct syntax: addlink <origin> <destination> <direction>\r\n")
+        if not line: session.push(tpl.ADDLINK_ERR)
         self.argu = line.lower()
         if not self.argu.strip(): session.push("> ")
         self.parts = self.argu.split(' ', 3)
@@ -73,10 +74,11 @@ class AdminCmds:
             self.direction = str(self.parts[2])
             
             Insert.addLink(self.roomnum, self.exitnum, self.direction)
-            session.push("New link added.\r\n")
+            session.push(tpl.ADDLINK)
         except:
-            session.push("Correct syntax: addlink <origin> <destination> <direction>\r\n")
+            session.push(tpl.ADDLINK_ERR)
 
+### Not really useful
 #   def do_listlinks(self, session, line):
 #       cu.execute("select * from links")
 #       self.linksall = cu.fetchall()
@@ -85,29 +87,29 @@ class AdminCmds:
 #           session.push("%6s %6s %6s %4s\r\n" % (str(i[0]), str(i[1]), str(i[2]), str(i[3])))
 
     def do_dellink(self, session, line):
-        if not line: session.push("Correct syntax: dellink <link ID>\r\n")
+        if not line: session.push(tpl.DELLINK_ERR)
         self.linker = Select.getLink(line)
         
         if self.linker != []:
             Delete.deleteLinkById(self.linker[0])
-            session.push("Link #%s has been deleted.\r\n" % self.linker[0])
+            session.push(tpl.DELLINK % self.linker[0])
         else:
-            session.push("This link does not exist.\r\n")
+            session.push(tpl.DELLINK_ERR)
 
     def do_setshort(self, session, line):
         try:
             Update.setShortDesc(session.is_in, line)
-            session.push("Short description changed.\r\n")
-        except: session.push("Unable to set the short description of this room.\r\n")
+            session.push(tpl.SETSHORT)
+        except: session.push(tpl.SETSHORT_ERR)
 
     def do_setlong(self, session, line):
         try:
             Update.setLongDesc(session.is_in, line)
-            session.push("Long description changed.\r\n")
-        except: session.push("Unable to set the long description of this room.\r\n")
+            session.push(tpl.SETLONG)
+        except: session.push(tpl.SETLONG_ERR)
 
     def do_addhelp(self, session, line):
-        if line == '': session.push("Correct syntax: addhelp <title> <documentation>\r\n")
+        if line == '': session.push(tpl.ADDHELP_ERR)
         else:
             self.argu = line.lower()
             self.parts = self.argu.split(' ', 1)
@@ -116,7 +118,7 @@ class AdminCmds:
             except:
                 cu.execute("insert into helps(command, doc) values\
                            (?, ?)", (self.parts[0], self.parts[1]))
-            session.push("Help database updated.\r\n")
+            session.push(tpl.ADDHELP)
 
     def do_locate(self, session, line):
         self.all = Select.getLocation()
@@ -130,13 +132,14 @@ class AdminCmds:
             self.room = Select.getRoom(line)
             Update.setLocation(self.room[0], session.p_id)
             session.is_in = self.room[0]
-        except: session.push("This room does not exist.\r\n")
+            session.push(tpl.GOTO)
+        except: session.push(tpl.GOTO_ERR)
 
     def do_additem(self, session, line):
-        if not line: session.push("The object needs a name.\r\n")
+        if not line: session.push(tpl.ADDITEM_ERR)
         else:
             self.iid = Insert.addItem(line.lower())
-            session.push("Item %s has been created with ID #%s.\r\n" % (line.lower(), self.iid))
+            session.push(tpl.ADDITEM % (line.lower(), self.iid))
 
     def do_listitems(self, session, line):
         self.lookobj = Select.getAllItems()
@@ -149,33 +152,32 @@ class AdminCmds:
         self.barn = Select.getItemNameId(line)
         try:
             Delete.deleteItem(self.barn[0])
-            session.push("%s and all its instances have been destroyed.\r\n" % self.barn[1])
+            session.push(tpl.DELITEM % self.barn[1])
         except:
-            session.push("This object does not exist.\r\n")
+            session.push(tpl.DELITEM_ERR)
 
     def do_itemdesc(self, session, line):
         try:
             self.splitarg = line.split(' ', 1)
             self.rcount = Update.setItemDescription(self.splitarg[0].lower(), self.splitarg[1])
             if self.rcount == 1:
-                session.push("Description set on %s.\r\n" % str(self.splitarg[0]).lower())
+                session.push(tpl.ITEMDESC % str(self.splitarg[0]).lower())
             else: 
-                session.push("Item not found.\r\n")
+                session.push(tpl.ITEMDESC_ERR)
 
-        except: session.push("This object does not exist.\r\n@itemdesc <item name> <description>")
+        except: session.push(tpl.)
 
     def do_clone(self, session, line):
         self.obj = Select.getItemNameId(line.lower())
         self.npc = Select.getNpc(line.lower())
 
         if self.obj:
-#            Insert.cloneItem(self.cloner[0], session.p_id, time.time())
             Insert.cloneItem(self.obj[0], session.p_id, time.time())
-            session.push("%s has been cloned.\r\n" % str(self.obj[1]))
+            session.push(tpl.CLONE % str(self.cloner[1]))
         elif self.npc:
             Insert.cloneItem(self.obj[0], session.p_id, time.time())
-            session.push("%s has been cloned.\r\n" % str(self.obj[1]))
-        else: session.push("No such object or NPC.\r\n")
+            session.push(tpl.CLONE % str(self.cloner[1]))
+        else: session.push(tpl.CLONE_ERR)
 
     def do_list_oinst(self, session, line):
         self.instobj = Select.listObjectInstances()
@@ -187,41 +189,41 @@ class AdminCmds:
     def do_dest_obj(self, session, line):
         self.rcount = Delete.deleteObject(line)
         if self.rcount == 1: 
-            session.push("Object Instance #%s has been destroyed.\r\n" % line)
+            session.push(tpl.DESTOBJ % line)
         else:
-            session.push("Object Instance #%s does not exist.\r\n" % line)
+            session.push(tpl.DESTOBJ_ERR % line)
 
     def do_dest_npc(self, session, line):
         self.rcount = Delete.deleteNpcInst(line)
         if self.rcount == 1: 
-            session.push("NPC Instance #%s has been destroyed.\r\n" % line)
+            session.push(tpl.DESTNPC % line)
         else: 
-            session.push("NPC Instance #%s does not exist.\r\n" % line)
+            session.push(tpl.DESTNPC_ERR % line)
 
     def do_addnpc(self, session, line):
-        if not line: session.push("The NPC needs a name.\r\n> ")
+        if not line: session.push(tpl.ADDNPC_ERR)
         else:
             self.nid = Insert.addNpc(line.lower())
-            session.push("NPC %s has been created with ID #%s.\r\n" % (line.lower(),self.nid))
+            session.push(tpl.ADDNPC % (line.lower(),self.nid))
 
     def do_npcdesc(self, session, line):
-        if not line: session.push("Correct syntax: npcdesc <name> <description>\r\n")
+        if not line: session.push(tpl.NPCDESC_ERR)
         
         self.splitarg = line.split(' ', 1)
         self.barn = Select.getNpc(self.splitarg[0].lower())
         
         if self.barn:
             setNpcDesc(self.barn[0], self.splitarg[1])
-            session.push("Description set on %s.\r\n" % str(self.splitarg[0]).lower())
-        else: session.push("This NPC does not exist.\r\n")
+            session.push(tpl.NPCDESC % str(self.splitarg[0]).lower())
+        else: session.push(tpl.NPCDESC_ERR)
 
     def do_delnpc(self, session, line):
         self.barn = Select.getNpc(line)
 
         if self.barn: #If the object exists
             Delete.deleteNpc(self.barn[0])
-            session.push("NPC #%s had been deleted.\r\n" % line)
-        else: session.push("This NPC does not exist.\r\n")
+            session.push(tpl.DELNPC % line)
+        else: session.push(tpl.DELNPC_ERR)
 
     def do_listnpcs(self, session, line):
         self.whole = Select.listNpcs()
@@ -238,17 +240,16 @@ class AdminCmds:
             session.push("%5s %15s %20s\r\n" % (str(i[0]), str(i[1]), str(i[2])))
 
     def do_ridplayer(self, session, line):
-        cu.execute("select id,name from players where name = ?", (line.lower(),))
-        self.getrid = cu.fetchone()
+        self.getrid = Select.getPlayerByName(line.lower())
         try:
             Delete.deletePlayer(self.getrid[1])
-            session.push("Player %s has been completely wiped out of the system.\r\n" % line.capitalize())
+            session.push(tpl.RIDPLAYER % line.capitalize())
         except:
-            session.push("Player %s not found in the database.\r\n" % line.capitalize())
+            session.push(tpl.RIDPLAYER_ERR % line.capitalize())
 
     def do_edig(self, session, line):
         c = C(session)
-        if not line: session.push("Usage: edig <exit> <room name/short description>\r\n")
+        if not line: session.push(tpl.EDIG_ERR1)
         else:
             self.splitarg = line.split(' ', 1)
             self.exists = Select.getExitsInRoom(session.is_in)
@@ -256,14 +257,14 @@ class AdminCmds:
             try:
                 self.flat = c.flatten(self.exists)
                 if self.splitarg[1] in self.flat:
-                    session.push("This exit already exists here.\r\n")
+                    session.push(tpl.EDIG_ERR2)
                 else:
                     self.count = Insert.addRoom(self.splitarg[0])
                     Insert.addLink(session.is_in, self.count, self.splitarg[1])
                     Insert.addLink(self.count, session.is_in, self.twoway[self.splitarg[1]])
-                    session.push("New room created %s of here.\r\n" % self.splitarg[1])
+                    session.push(tpl.EDIG % self.splitarg[1])
             except:
-                session.push("Usage: edig <exit> <room name/short description>\r\n")
+                session.push(tpl.EDIG_ERR1)
 
     ### Commented out, it's not useful for now.
     ###
@@ -286,13 +287,13 @@ class AdminCmds:
                 #except: raise
 
     def do_email(self, session, line):
-        if not line: session.push("Correct syntax:\r\nemail <name>\r\n")
+        if not line: session.push(tpl.EMAIL)
         else:
             self.email = Select.getEmail(line.lower())
             if self.email:
                 session.push("%s: %s\r\n" % (self.email[0], self.email[1]))
             else:
-                session.push("Player not found.\r\n")
+                session.push(tpl.EMAIL_ERR)
 
     def do_kickout(self, session, line):
         try:
@@ -300,11 +301,11 @@ class AdminCmds:
             self.kick = self.sessions[self.kicked[0]]
             self.kick.shutdown(0)
         except:
-            session.push("Player not found.\r\n")
+            session.push(tpl.EMAIL_ERR)
 
     def do_import(self, session, line):		
         self.splitarg = line.split(' ', 2)
-        if len(self.splitarg) < 3: session.push("Usage: import <file> <first room> <direction>\r\n")
+        if len(self.splitarg) < 3: session.push(tpl.IMPORT_ERR1)
         else:
             self.map = self.splitarg[0]
             self.start = self.splitarg[1]
@@ -330,6 +331,6 @@ class AdminCmds:
                     for j in i[1]:
                         Insert.addLink(str(i[0]), str(j[1]), str(j[0]))
 
-                session.push("Map imported successfully.\r\n")
+                session.push(tpl.IMPORT)
 
-            else: session.push("Connected room not found on the map.\r\n")
+            else: session.push(tpl.IMPORT_ERR2)

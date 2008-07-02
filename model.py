@@ -123,6 +123,10 @@ class Select:
         cu.execute("select exit,id from links where origin = ?", (loc,))
         return cu.fetchall()
     
+    def getBan(self, player):
+        cu.execute("select banned from players where name = ?", (player,))
+        return cu.fetchone()
+    
     def getItemInstance(self, pid, object):
         cu.execute("select oi.id, o.name from obj_instances oi, objects o \
                     where oi.owner = ? and o.name = ? and o.id = oi.o_id", (pid, object))
@@ -138,7 +142,7 @@ class Select:
     
     def getLink(self, id):
         cu.execute("select id from links where id = ?", (id, ))
-        return cu.fetchonce()
+        return cu.fetchone()
     
     def getLocation(self):
         cu.execute("select id,name,location,ip_addr from players where location > 0")
@@ -149,12 +153,19 @@ class Select:
         return cu.fetchall()
     
     def getItemNameId(self, item):
-        #cu.execute("select id, name from objects where id = ? or where name = ?", (item, item))
         cu.execute("select id, name from objects where id = ? or name = ?", (item, item))
         return cu.fetchone()
     
     def getNpc(self, npc):
         cu.execute("select id,name from npcs where name = ?", (npc,))
+        return cu.fetchone()
+    
+    def getPassword(self, player):
+        cu.execute("select passwd,salt from players where name = ?", (player,))
+        return cu.fetchone()
+
+    def getIP(self, player):
+        cu.execute("select id,ip_addr from players where name = ?", (player,))
         return cu.fetchone()
     
     def getEmail(self, player):
@@ -242,6 +253,10 @@ class Update:
         
         
 class Insert:
+    
+    def newPlayer(self, data):
+        cu.execute("insert into players(id,name,email,passwd,salt,location,description,colors)\
+                    values (NULL,?,?,?,?,0,'Description not set',?)", data)
     
     def addRoom(self, sdesc = None, room_id = None):
         if sdesc:

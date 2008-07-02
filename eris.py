@@ -3,6 +3,7 @@ from asynchat import async_chat
 import socket, asyncore, time, sys, ConfigParser
 from login import *
 from admin import *
+import template as tpl
 
 from model import Select, Update
 Update = Update()
@@ -24,7 +25,6 @@ logger = open(config.get("logging", "logfile"), 'a')
 def Log(line):
     "Just call Log('text') to log to the main log file."
     timer = time.asctime()
-    print type(logger)
     logger.write("%s %s\n" % (line, timer))
     logger.flush()
 
@@ -33,7 +33,7 @@ class Handler:
     "Command parser, where all player commands go."
 
     def unknown(self, session, cmd):
-        session.push('Unknown command: %s\r\n' % str(cmd))
+        session.push(tpl.UNKNOWN_CMD % str(cmd))
 
     def handle(self, session, line):
         #Time of last command executed. Will be used for external timeout cleanup.
@@ -111,7 +111,7 @@ class EnterGame(Handler):
         self.ival = ipsessions.items()
 
         if session.addr[0] != "127.0.0.1" and session.addr[0] in self.ival: # Allow multiusers for the admin.
-            session.push("You are already connected!\r\n\r\n")
+            session.push(tpl.LOGIN_ALREADY_IN)
             raise EndSession
 
         sessions[session.p_id] = session
@@ -128,7 +128,7 @@ class EnterGame(Handler):
 
         for i in sessions:
             try:
-                i.push("%s enters the game.\r\n\r\n> " % (session.pname,))
+                i.push(tpl.ENTER_GAME % (session.pname,))
             except: pass
 
         print "%s logged in." % session.pname
@@ -192,7 +192,7 @@ class SecondServSock(async_chat):
                         if self.tmpsec == None: # Shouldn't happen, do some cleaning
                             Update.LogoutPlayer(j[0])
                         else:
-                            self.tmpsec.push("%s leaves the game.\r\n\r\n> " % (self.leaver,))
+                            self.tmpsec.push(tpl.LEAVE_GAME % (self.leaver,))
 
                     async_chat.handle_close(self)
                 else: raise

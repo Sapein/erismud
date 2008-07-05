@@ -1,4 +1,4 @@
-import tables
+import tables, time
 from common import C
 from model import Select, Update, Insert, Delete
 import template as tpl
@@ -165,7 +165,7 @@ class AdminCmds:
             else: 
                 session.push(tpl.ITEMDESC_ERR)
 
-        except: session.push(tpl.)
+        except: session.push(tpl.ITEMDESC_ERR)
 
     def do_clone(self, session, line):
         self.obj = Select.getItemNameId(line.lower())
@@ -173,10 +173,10 @@ class AdminCmds:
 
         if self.obj:
             Insert.cloneItem(self.obj[0], session.p_id, time.time())
-            session.push(tpl.CLONE % str(self.cloner[1]))
+            session.push(tpl.CLONE % str(self.obj[1]))
         elif self.npc:
             Insert.cloneItem(self.obj[0], session.p_id, time.time())
-            session.push(tpl.CLONE % str(self.cloner[1]))
+            session.push(tpl.CLONE % str(self.npc[1]))
         else: session.push(tpl.CLONE_ERR)
 
     def do_list_oinst(self, session, line):
